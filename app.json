@@ -41,11 +41,6 @@
         }
       ]
     ],
-    "scheme": "nostrark",
-    "extra": {
-      "eas": {
-        "projectId": "your-project-id"
-      }
-    }
+    "scheme": "nostrark"
   }
 }
