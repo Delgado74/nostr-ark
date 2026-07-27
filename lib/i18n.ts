@@ -1,0 +1,283 @@
+export type Language = 'es' | 'en';
+export type Currency = 'CUP' | 'USD' | 'EUR';
+
+export const translations = {
+  en: {
+    // Auth
+    auth: {
+      loading: 'Loading...',
+      createWallet: 'Create New Wallet',
+      importWallet: 'Import Existing Wallet',
+      subtitle: 'Bitcoin Wallet',
+      footer: 'Self-custodial • Nostr Identity • Lightning + Ark',
+    },
+    create: {
+      title: 'Create New Wallet',
+      description: 'Create a password to encrypt your wallet. This password will be required to access your funds.',
+      password: 'Password',
+      confirmPassword: 'Confirm Password',
+      generate: 'Generate Wallet',
+      important: 'Important',
+      warning: 'Save your private key securely. This is the only way to recover your wallet.',
+      privateKey: 'Your Private Key (nsec)',
+      copyClipboard: 'Copy to Clipboard',
+      savedKey: "I've Saved My Key",
+      back: 'Back',
+      errors: {
+        passwordLength: 'Password must be at least 6 characters',
+        passwordMatch: 'Passwords do not match',
+        generateFailed: 'Failed to generate wallet',
+        saveFailed: 'Failed to save wallet',
+      },
+    },
+    import: {
+      title: 'Import Wallet',
+      description: 'Enter your existing Nostr private key (nsec) to import your wallet.',
+      privateKey: 'Private Key (nsec)',
+      newPassword: 'New Password',
+      confirmPassword: 'Confirm Password',
+      import: 'Import Wallet',
+      back: 'Back',
+      errors: {
+        invalidKey: 'Invalid private key format. Must start with nsec1',
+        passwordLength: 'Password must be at least 6 characters',
+        passwordMatch: 'Passwords do not match',
+        importFailed: 'Failed to import wallet. Check your private key.',
+      },
+    },
+    // Tabs
+    tabs: {
+      home: 'Home',
+      send: 'Send',
+      receive: 'Receive',
+      history: 'History',
+      settings: 'Settings',
+    },
+    // Dashboard
+    dashboard: {
+      balance: 'Balance',
+      network: 'Network',
+      lightning: 'Lightning',
+      ark: 'Ark',
+      onchain: 'On-chain',
+      connected: 'Connected',
+      viewHistory: 'View Transaction History',
+    },
+    // Send
+    send: {
+      title: 'Send',
+      invoiceAddress: 'Invoice or Address',
+      placeholder: 'lnbc... / ark1qq... / bc1q...',
+      amountOptional: 'Amount (optional for invoices)',
+      scanQR: 'Scan QR Code',
+      sendPayment: 'Send Payment',
+      sending: 'Sending...',
+      supportedFormats: 'Supported formats:',
+      lightningInvoice: 'Lightning invoice (lnbc...)',
+      arkAddress: 'Ark address (ark1qq...)',
+      bitcoinAddress: 'Bitcoin address (bc1q...)',
+      errors: {
+        enterInvoice: 'Please enter an invoice or address',
+        invalidFormat: 'Invalid invoice or address format',
+        sendFailed: 'Failed to send payment',
+      },
+      success: {
+        title: 'Success',
+        message: 'Payment sent successfully',
+      },
+    },
+    // Receive
+    receive: {
+      title: 'Receive',
+      amount: 'Amount',
+      memo: 'Memo (optional)',
+      memoPlaceholder: "What's this payment for?",
+      generateInvoice: 'Generate Invoice',
+      yourAddresses: 'Your addresses:',
+      lightning: 'Lightning',
+      availableAfter: 'Available after generating',
+      invoiceGenerated: 'Invoice Generated',
+      scanToPay: 'Scan to pay',
+      copyInvoice: 'Copy Invoice',
+      createNew: 'Create New Invoice',
+      errors: {
+        enterAmount: 'Please enter an amount',
+      },
+    },
+    // History
+    history: {
+      title: 'History',
+      noTransactions: 'No transactions yet',
+      received: 'Received',
+      sent: 'Sent',
+      atReception: 'at reception',
+      now: 'now',
+      atSending: 'at sending',
+    },
+    // Settings
+    settings: {
+      title: 'Settings',
+      language: 'Language',
+      currency: 'Currency',
+      backup: 'Backup',
+      backupDescription: 'Export your private key',
+      exportKey: 'Export Private Key',
+      about: 'About',
+      version: 'Version',
+      network: 'Network',
+      dangerZone: 'Danger Zone',
+      deleteWallet: 'Delete Wallet',
+      deleteWarning: 'This will permanently delete your wallet. Make sure you have backed up your private key.',
+      deleteConfirm: 'Delete Wallet',
+    },
+    // Common
+    common: {
+      cancel: 'Cancel',
+      confirm: 'Confirm',
+      close: 'Close',
+      error: 'Error',
+      success: 'Success',
+      loading: 'Loading...',
+    },
+  },
+  es: {
+    // Auth
+    auth: {
+      loading: 'Cargando...',
+      createWallet: 'Crear Billetera Nueva',
+      importWallet: 'Importar Billetera Existente',
+      subtitle: 'Billetera Bitcoin',
+      footer: 'Auto-custodia • Identidad Nostr • Lightning + Ark',
+    },
+    create: {
+      title: 'Crear Billetera Nueva',
+      description: 'Crea una contraseña para encriptar tu billetera. Esta contraseña será necesaria para acceder a tus fondos.',
+      password: 'Contraseña',
+      confirmPassword: 'Confirmar Contraseña',
+      generate: 'Generar Billetera',
+      important: 'Importante',
+      warning: 'Guarda tu clave privada de forma segura. Esta es la única manera de recuperar tu billetera.',
+      privateKey: 'Tu Clave Privada (nsec)',
+      copyClipboard: 'Copiar al Portapapeles',
+      savedKey: 'Guardé Mi Clave',
+      back: 'Volver',
+      errors: {
+        passwordLength: 'La contraseña debe tener al menos 6 caracteres',
+        passwordMatch: 'Las contraseñas no coinciden',
+        generateFailed: 'Error al generar la billetera',
+        saveFailed: 'Error al guardar la billetera',
+      },
+    },
+    import: {
+      title: 'Importar Billetera',
+      description: 'Ingresa tu clave privada Nostr existente (nsec) para importar tu billetera.',
+      privateKey: 'Clave Privada (nsec)',
+      newPassword: 'Nueva Contraseña',
+      confirmPassword: 'Confirmar Contraseña',
+      import: 'Importar Billetera',
+      back: 'Volver',
+      errors: {
+        invalidKey: 'Formato de clave privado inválido. Debe comenzar con nsec1',
+        passwordLength: 'La contraseña debe tener al menos 6 caracteres',
+        passwordMatch: 'Las contraseñas no coinciden',
+        importFailed: 'Error al importar la billetera. Verifica tu clave privada.',
+      },
+    },
+    // Tabs
+    tabs: {
+      home: 'Inicio',
+      send: 'Enviar',
+      receive: 'Recibir',
+      history: 'Historial',
+      settings: 'Ajustes',
+    },
+    // Dashboard
+    dashboard: {
+      balance: 'Balance',
+      network: 'Red',
+      lightning: 'Lightning',
+      ark: 'Ark',
+      onchain: 'On-chain',
+      connected: 'Conectado',
+      viewHistory: 'Ver Historial de Transacciones',
+    },
+    // Send
+    send: {
+      title: 'Enviar',
+      invoiceAddress: 'Factura o Dirección',
+      placeholder: 'lnbc... / ark1qq... / bc1q...',
+      amountOptional: 'Monto (opcional para facturas)',
+      scanQR: 'Escanear Código QR',
+      sendPayment: 'Enviar Pago',
+      sending: 'Enviando...',
+      supportedFormats: 'Formatos soportados:',
+      lightningInvoice: 'Factura Lightning (lnbc...)',
+      arkAddress: 'Dirección Ark (ark1qq...)',
+      bitcoinAddress: 'Dirección Bitcoin (bc1q...)',
+      errors: {
+        enterInvoice: 'Por favor ingresa una factura o dirección',
+        invalidFormat: 'Formato de factura o dirección inválido',
+        sendFailed: 'Error al enviar el pago',
+      },
+      success: {
+        title: 'Éxito',
+        message: 'Pago enviado exitosamente',
+      },
+    },
+    // Receive
+    receive: {
+      title: 'Recibir',
+      amount: 'Monto',
+      memo: 'Memo (opcional)',
+      memoPlaceholder: '¿Para qué es este pago?',
+      generateInvoice: 'Generar Factura',
+      yourAddresses: 'Tus direcciones:',
+      lightning: 'Lightning',
+      availableAfter: 'Disponible después de generar',
+      invoiceGenerated: 'Factura Generada',
+      scanToPay: 'Escanear para pagar',
+      copyInvoice: 'Copiar Factura',
+      createNew: 'Crear Nueva Factura',
+      errors: {
+        enterAmount: 'Por favor ingresa un monto',
+      },
+    },
+    // History
+    history: {
+      title: 'Historial',
+      noTransactions: 'Aún no hay transacciones',
+      received: 'Recibido',
+      sent: 'Enviado',
+      atReception: 'al recibir',
+      now: 'ahora',
+      atSending: 'al enviar',
+    },
+    // Settings
+    settings: {
+      title: 'Ajustes',
+      language: 'Idioma',
+      currency: 'Moneda',
+      backup: 'Respaldo',
+      backupDescription: 'Exportar tu clave privada',
+      exportKey: 'Exportar Clave Privada',
+      about: 'Acerca de',
+      version: 'Versión',
+      network: 'Red',
+      dangerZone: 'Zona de Peligro',
+      deleteWallet: 'Eliminar Billetera',
+      deleteWarning: 'Esto eliminará permanentemente tu billetera. Asegúrate de haber respaldado tu clave privada.',
+      deleteConfirm: 'Eliminar Billetera',
+    },
+    // Common
+    common: {
+      cancel: 'Cancelar',
+      confirm: 'Confirmar',
+      close: 'Cerrar',
+      error: 'Error',
+      success: 'Éxito',
+      loading: 'Cargando...',
+    },
+  },
+};
+
+export type TranslationKeys = typeof translations.en;
