@@ -29,9 +29,20 @@ jobs:
         run: eas init --account btclnat --non-interactive
 
       - name: Build Android APK
-        run: eas build -p android --profile preview --non-interactive
+        id: build
+        run: |
+          eas build -p android --profile preview --non-interactive 2>&1 | tee build-output.txt
+          BUILD_URL=$(grep -oP 'https://expo\.dev/artifacts/eas/[A-Za-z0-9]+' build-output.txt || true)
+          echo "build_url=$BUILD_URL" >> $GITHUB_OUTPUT
+
+      - name: Download APK from EAS
+        if: steps.build.outputs.build_url != ''
+        run: |
+          mkdir -p build-apk
+          eas build:download --url "${{ steps.build.outputs.build_url }}" --platform android --path build-apk/
 
       - name: Upload APK artifact
+        if: steps.build.outputs.build_url != ''
         uses: actions/upload-artifact@v4
         with:
           name: nostr-ark-apk
