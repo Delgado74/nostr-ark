@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BarcodeScanner,
   BarcodeFormat,
@@ -9,17 +10,23 @@ interface Props {
   onClose: () => void;
 }
 
-export function QrScanner({ onScan, onClose }: Props) {
+function ScannerOverlay({ onScan, onClose }: Props) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
-  const [attempt, setAttempt] = useState(0);
+  const [scanKey, setScanKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
-    const scan = async () => {
+    const stop = async () => {
+      try { await BarcodeScanner.stopScan(); } catch { /* ignore */ }
+      try { await BarcodeScanner.removeAllListeners(); } catch { /* ignore */ }
+    };
+
+    const start = async () => {
       setBusy(true);
       setError('');
+      document.body.classList.add('scanner-active');
       try {
         const { supported } = await BarcodeScanner.isSupported();
         if (!supported) {
@@ -28,23 +35,33 @@ export function QrScanner({ onScan, onClose }: Props) {
           return;
         }
 
-        const { available } =
-          await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
-        if (!available) {
-          await BarcodeScanner.installGoogleBarcodeScannerModule();
+        const perm = await BarcodeScanner.requestPermissions();
+        if (cancelled) return;
+        if (perm.camera === 'denied' || perm.camera === 'prompt') {
+          setError('Permiso de cámara denegado');
+          setBusy(false);
+          return;
         }
 
-        const { barcodes } = await BarcodeScanner.scan({
+        await BarcodeScanner.addListener(
+          'barcodeScanned',
+          (result) => {
+            if (cancelled) return;
+            const raw = result.barcode?.rawValue;
+            if (raw) {
+              cancelled = true;
+              stop();
+              document.body.classList.remove('scanner-active');
+              onScan(raw);
+            }
+          }
+        );
+
+        await BarcodeScanner.startScan({
           formats: [BarcodeFormat.QrCode],
         });
 
-        if (cancelled) return;
-
-        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-          onScan(barcodes[0].rawValue);
-        } else {
-          onClose();
-        }
+        if (!cancelled) setBusy(false);
       } catch (err) {
         if (cancelled) return;
         const msg = (err as Error)?.message || '';
@@ -53,6 +70,9 @@ export function QrScanner({ onScan, onClose }: Props) {
           msg.includes('User') ||
           msg.includes('user')
         ) {
+          cancelled = true;
+          stop();
+          document.body.classList.remove('scanner-active');
           onClose();
         } else {
           setError('Error: ' + msg);
@@ -61,45 +81,30 @@ export function QrScanner({ onScan, onClose }: Props) {
       }
     };
 
-    scan();
+    start();
 
-    return () => { cancelled = true; };
-  }, [attempt, onScan, onClose]);
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [scanKey, onScan, onClose]);
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: '#000',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-      }}
-    >
+    <div className="scanner-overlay">
       {busy && (
-        <>
-          <div className="spinner" style={{ width: 40, height: 40, borderWidth: 3 }} />
-          <p style={{ color: '#fff', marginTop: 16, fontSize: 14 }}>
-            {error || 'Escaneando QR...'}
-          </p>
-        </>
+        <p className="scanner-hint">Apunta al código QR</p>
       )}
 
       {!busy && error && (
         <>
-          <p style={{ color: '#e74c3c', fontSize: 14, textAlign: 'center', padding: '0 24px' }}>
-            {error}
-          </p>
+          <p className="scanner-error">{error}</p>
           <button
             className="btn btn-primary"
-            style={{ marginTop: 16 }}
-            onClick={() => setAttempt((a) => a + 1)}
+            style={{ marginBottom: 16 }}
+            onClick={() => {
+              document.body.classList.remove('scanner-active');
+              setScanKey((k) => k + 1);
+            }}
           >
             Reintentar
           </button>
@@ -108,11 +113,20 @@ export function QrScanner({ onScan, onClose }: Props) {
 
       <button
         className="btn btn-secondary"
-        style={{ marginTop: 24, width: 200 }}
-        onClick={onClose}
+        style={{ width: 200 }}
+        onClick={() => {
+          BarcodeScanner.stopScan();
+          BarcodeScanner.removeAllListeners();
+          document.body.classList.remove('scanner-active');
+          onClose();
+        }}
       >
         Cancelar
       </button>
     </div>
   );
+}
+
+export function QrScanner(props: Props) {
+  return createPortal(<ScannerOverlay {...props} />, document.body);
 }
