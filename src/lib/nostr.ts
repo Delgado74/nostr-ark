@@ -1,6 +1,6 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { sha256 } from '@noble/hashes/sha256';
-import { encode, decode, toWords, fromWords } from 'bech32';
+import { bech32 } from 'bech32';
 import { schnorr } from '@noble/curves/secp256k1';
 
 export interface NostrKeyPair {
@@ -14,15 +14,15 @@ const NSEC_PREFIX = 'nsec';
 const NPUB_PREFIX = 'npub';
 
 function bech32Encode(prefix: string, data: Uint8Array): string {
-  const words = toWords(data);
+  const words = bech32.toWords(data);
   words.unshift(0);
-  return encode(prefix, words, 100);
+  return bech32.encode(prefix, words, 100);
 }
 
 function bech32Decode(prefix: string, encoded: string): Uint8Array {
-  const decoded = decode(encoded, 100);
+  const decoded = bech32.decode(encoded, 100);
   if (decoded.prefix !== prefix) throw new Error(`Invalid prefix: ${decoded.prefix}`);
-  const data = fromWords(decoded.words);
+  const data = bech32.fromWords(decoded.words);
   return new Uint8Array(data.slice(1));
 }
 
