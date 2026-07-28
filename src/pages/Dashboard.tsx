@@ -27,16 +27,18 @@ export function Dashboard({ keypair, onNavigate, balance }: Props) {
 
   return (
     <div>
-      <div className="header">
+      <div className="header" style={{ justifyContent: 'center' }}>
         <h1>NostrArk</h1>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className={`network-badge ${network}`}>
+          <span className="dot"></span>
+          {network === 'mainnet' ? tFunc('dash.mainnet') : tFunc('dash.signet')}
+        </div>
         <button className="header-btn" onClick={() => onNavigate('settings')}>
           ⚙
         </button>
-      </div>
-
-      <div className={`network-badge ${network}`}>
-        <span className="dot"></span>
-        {network === 'mainnet' ? tFunc('dash.mainnet') : tFunc('dash.testnet')}
       </div>
 
       <div className="balance-section">

@@ -15,7 +15,7 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.balance': 'Saldo',
     'dash.network': 'Red',
     'dash.mainnet': 'Mainnet',
-    'dash.testnet': 'Testnet',
+    'dash.signet': 'Signet',
     'dash.send': 'Enviar',
     'dash.receive': 'Recibir',
     'dash.history': 'Historial',
@@ -67,7 +67,7 @@ const t: Record<Lang, Record<string, string>> = {
     'settings.currency': 'Moneda',
     'settings.network': 'Red',
     'settings.mainnet': 'Mainnet',
-    'settings.testnet': 'Testnet',
+    'settings.signet': 'Signet',
     'settings.backup': 'Copia de Seguridad',
     'settings.backupTitle': 'Tu clave nsec',
     'settings.backupWarning': 'Guarda esta clave en un lugar seguro. Es tu acceso a la billetera.',
@@ -92,7 +92,7 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.balance': 'Balance',
     'dash.network': 'Network',
     'dash.mainnet': 'Mainnet',
-    'dash.testnet': 'Testnet',
+    'dash.signet': 'Signet',
     'dash.send': 'Send',
     'dash.receive': 'Receive',
     'dash.history': 'History',
@@ -144,7 +144,7 @@ const t: Record<Lang, Record<string, string>> = {
     'settings.currency': 'Currency',
     'settings.network': 'Network',
     'settings.mainnet': 'Mainnet',
-    'settings.testnet': 'Testnet',
+    'settings.signet': 'Signet',
     'settings.backup': 'Backup',
     'settings.backupTitle': 'Your nsec key',
     'settings.backupWarning': 'Save this key in a safe place. It is your wallet access.',
@@ -170,7 +170,7 @@ export const tFunc = (key: string): string => {
   return t[currentLang]?.[key] || t['es']?.[key] || key;
 };
 
-export type Network = 'mainnet' | 'testnet';
+export type Network = 'mainnet' | 'signet';
 
 let currentNetwork: Network = (localStorage.getItem('network') as Network) || 'mainnet';
 

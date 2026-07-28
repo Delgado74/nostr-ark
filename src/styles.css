@@ -611,12 +611,12 @@ textarea.input {
   color: var(--accent);
 }
 
-/* Testnet badge */
-.network-badge.testnet {
+/* Signet badge */
+.network-badge.signet {
   background: rgba(52, 152, 219, 0.15);
   color: var(--blue);
 }
 
-.network-badge.testnet .dot {
+.network-badge.signet .dot {
   background: var(--blue);
 }

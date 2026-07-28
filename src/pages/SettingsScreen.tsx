@@ -88,7 +88,7 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
             onChange={(e) => handleNetworkChange(e.target.value as Network)}
           >
             <option value="mainnet">{tFunc('settings.mainnet')}</option>
-            <option value="testnet">{tFunc('settings.testnet')}</option>
+            <option value="signet">{tFunc('settings.signet')}</option>
           </select>
         </div>
 

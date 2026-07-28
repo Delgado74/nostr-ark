@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { type NostrKeyPair, getPubkeyHex } from '../lib/nostr';
 import { getArkAddress, createLightningInvoice, getOnchainAddress } from '../lib/ark';
 import { satsToFiat, getCurrency } from '../lib/yadio';
-import { tFunc } from '../lib/i18n';
+import { tFunc, getNetwork } from '../lib/i18n';
 import { Clipboard } from '@capacitor/clipboard';
 import QRCode from 'qrcode';
 
@@ -23,6 +23,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
   const qrRef = useRef<HTMLCanvasElement>(null);
 
   const pubkeyHex = getPubkeyHex(keypair);
+  const network = getNetwork();
 
   useEffect(() => {
     const loadAddress = async () => {
@@ -35,17 +36,18 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
           addr = await createLightningInvoice(
             amount ? Number(amount) : 0,
             memo,
-            pubkeyHex
+            pubkeyHex,
+            network
           );
           break;
         case 'onchain':
-          addr = await getOnchainAddress(pubkeyHex);
+          addr = await getOnchainAddress(pubkeyHex, network);
           break;
       }
       setAddress(addr);
     };
     loadAddress();
-  }, [networkType, pubkeyHex, amount, memo]);
+  }, [networkType, pubkeyHex, amount, memo, network]);
 
   useEffect(() => {
     if (amount && Number(amount) > 0) {
