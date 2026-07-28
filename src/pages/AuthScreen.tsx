@@ -11,12 +11,20 @@ export function AuthScreen({ onAuthenticated }: Props) {
   const [importMode, setImportMode] = useState(false);
   const [nsecInput, setNsecInput] = useState('');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const handleCreate = async () => {
-    const kp = generateKeyPair();
-    await storage.set(KEYS.NSEC, kp.nsec);
-    await storage.set(KEYS.NPUB, kp.npub);
-    onAuthenticated(kp);
+    setCreating(true);
+    try {
+      const kp = generateKeyPair();
+      await storage.set(KEYS.NSEC, kp.nsec);
+      await storage.set(KEYS.NPUB, kp.npub);
+      onAuthenticated(kp);
+    } catch {
+      setError(tFunc('auth.importError'));
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleImport = async () => {
@@ -38,8 +46,8 @@ export function AuthScreen({ onAuthenticated }: Props) {
 
       {!importMode ? (
         <div className="auth-actions">
-          <button className="btn btn-primary" onClick={handleCreate}>
-            {tFunc('auth.create')}
+          <button className="btn btn-primary" onClick={handleCreate} disabled={creating}>
+            {creating ? '...' : tFunc('auth.create')}
           </button>
           <button className="btn btn-secondary" onClick={() => setImportMode(true)}>
             {tFunc('auth.import')}

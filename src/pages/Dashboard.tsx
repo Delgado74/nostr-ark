@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { type NostrKeyPair, shortPubkey } from '../lib/nostr';
-import { type ArkBalance } from '../lib/ark';
+import { type NostrKeyPair, shortPubkey, getPubkeyHex } from '../lib/nostr';
+import { type ArkBalance, type VtxoInfo } from '../lib/ark';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc, getNetwork } from '../lib/i18n';
 
@@ -8,22 +8,27 @@ interface Props {
   keypair: NostrKeyPair;
   onNavigate: (page: string) => void;
   balance: ArkBalance;
+  vtxos: VtxoInfo[];
+  recoverable: number;
+  onRenew: () => void;
+  onRecover: () => void;
+  renewing: boolean;
+  recovering: boolean;
 }
 
-function pubkeyToHex(keypair: NostrKeyPair): string {
-  return Array.from(keypair.pubkey)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-export function Dashboard({ keypair, onNavigate, balance }: Props) {
+export function Dashboard({ keypair, onNavigate, balance, vtxos, recoverable, onRenew, onRecover, renewing, recovering }: Props) {
   const [fiatValue, setFiatValue] = useState('...');
-  const pubkeyHex = pubkeyToHex(keypair);
+  const pubkeyHex = getPubkeyHex(keypair);
   const network = getNetwork();
 
   useEffect(() => {
     satsToFiat(balance.confirmed, getCurrency()).then(setFiatValue);
   }, [balance.confirmed]);
+
+  const settledCount = vtxos.filter(v => v.state === 'settled').length;
+  const preconfirmedCount = vtxos.filter(v => v.state === 'preconfirmed').length;
+  const hasVtxos = vtxos.length > 0;
+  const hasRecoverable = recoverable > 0;
 
   return (
     <div>
@@ -31,14 +36,9 @@ export function Dashboard({ keypair, onNavigate, balance }: Props) {
         <h1>NostrArk</h1>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div className={`network-badge ${network}`}>
-          <span className="dot"></span>
-          {network === 'mainnet' ? tFunc('dash.mainnet') : tFunc('dash.signet')}
-        </div>
-        <button className="header-btn" onClick={() => onNavigate('settings')}>
-          ⚙
-        </button>
+      <div className={`network-badge ${network}`}>
+        <span className="dot"></span>
+        {network === 'mainnet' ? tFunc('dash.mainnet') : tFunc('dash.signet')}
       </div>
 
       <div className="balance-section">
@@ -49,7 +49,7 @@ export function Dashboard({ keypair, onNavigate, balance }: Props) {
         <div className="balance-fiat">≈ {fiatValue}</div>
         {balance.pending > 0 && (
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-            +{balance.pending.toLocaleString('es-ES')} pending
+            +{balance.pending.toLocaleString('es-ES')} {tFunc('dash.pending')}
           </div>
         )}
       </div>
@@ -63,6 +63,65 @@ export function Dashboard({ keypair, onNavigate, balance }: Props) {
           <span className="btn-icon">↙</span>
           {tFunc('dash.receive')}
         </button>
+      </div>
+
+      {/* VTXO Status Card */}
+      <div className="card vtxo-card">
+        <div className="vtxo-header">
+          <span className="vtxo-title">🔗 {tFunc('dash.vtxoStatus')}</span>
+          {hasVtxos && (
+            <span className="vtxo-count">{vtxos.length} VTXO{vtxos.length !== 1 ? 's' : ''}</span>
+          )}
+        </div>
+
+        {!hasVtxos ? (
+          <div className="vtxo-empty">{tFunc('dash.vtxoEmpty')}</div>
+        ) : (
+          <div className="vtxo-stats">
+            {settledCount > 0 && (
+              <div className="vtxo-stat">
+                <span className="vtxo-dot settled"></span>
+                <span className="vtxo-stat-label">{tFunc('dash.vtxoSettled')}</span>
+                <span className="vtxo-stat-value">{settledCount}</span>
+              </div>
+            )}
+            {preconfirmedCount > 0 && (
+              <div className="vtxo-stat">
+                <span className="vtxo-dot preconfirmed"></span>
+                <span className="vtxo-stat-label">{tFunc('dash.vtxoPreconfirmed')}</span>
+                <span className="vtxo-stat-value">{preconfirmedCount}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {hasVtxos && (
+          <button
+            className="btn btn-secondary btn-sm vtxo-btn"
+            onClick={onRenew}
+            disabled={renewing}
+          >
+            {renewing ? `⏳ ${tFunc('dash.vtxoRenewing')}` : `🔄 ${tFunc('dash.vtxoRenew')}`}
+          </button>
+        )}
+
+        {hasRecoverable && (
+          <>
+            <div className="vtxo-divider"></div>
+            <div className="vtxo-recoverable">
+              <div className="vtxo-recoverable-info">
+                <span>💰 {recoverable.toLocaleString('es-ES')} sats {tFunc('dash.vtxoRecoverable')}</span>
+              </div>
+              <button
+                className="btn btn-primary btn-sm vtxo-btn"
+                onClick={onRecover}
+                disabled={recovering}
+              >
+                {recovering ? `⏳ ${tFunc('dash.vtxoRecovering')}` : `♻️ ${tFunc('dash.vtxoRecover')}`}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div

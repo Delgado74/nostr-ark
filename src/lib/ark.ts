@@ -1,12 +1,23 @@
-import { bytesToHex } from '@noble/hashes/utils';
+import { Wallet, SingleKey, VtxoManager, type Wallet as WalletType } from '@arkade-os/sdk';
 import { sha256 } from '@noble/hashes/sha256';
-import { bech32 } from 'bech32';
+import { bytesToHex } from '@noble/hashes/utils';
+import { getNetwork } from './i18n';
 
-const ARK_ASP_URL = 'https://arkade.computer';
+const ARK_SERVER_URL = 'https://arkade.computer';
 
 export interface ArkBalance {
   confirmed: number;
   pending: number;
+  recoverable: number;
+  total: number;
+}
+
+export interface VtxoInfo {
+  txid: string;
+  vout: number;
+  value: number;
+  state: 'preconfirmed' | 'settled' | 'swept' | 'spent';
+  batchTxID?: string;
 }
 
 export interface ArkTransaction {
@@ -17,139 +28,238 @@ export interface ArkTransaction {
   memo?: string;
   network: 'ark' | 'lightning' | 'onchain';
   fiatAtTime?: number;
+  settled?: boolean;
 }
 
-function generatePaymentHash(pubkeyHex: string, amount: number): string {
-  const data = `${pubkeyHex}:${amount}:${Date.now()}`;
-  const hash = sha256(new TextEncoder().encode(data));
-  return bytesToHex(hash);
+export interface SendResult {
+  success: boolean;
+  txId: string;
 }
 
-function encodePaymentRequest(
-  prefix: string,
-  amountMsat: number | null,
-  paymentHash: string,
-  pubkeyHex: string,
-  timestamp: number,
-  description: string
-): string {
-  // BOLT 11 invoice format (simplified but realistic structure)
-  // prefix + [amount] + timestamp (encoded in bech32) + tagged fields + signature
+let walletInstance: WalletType | null = null;
+let vtxoManagerInstance: VtxoManager | null = null;
 
-  const hrp = prefix + (amountMsat !== null ? encodeAmount(amountMsat, prefix) : '');
+export async function initArkWallet(privkeyHex: string): Promise<WalletType> {
+  if (walletInstance) return walletInstance;
 
-  // Timestamp in bech32 (9 digits)
-  const ts = timestamp.toString();
-  const tsPadded = ts.padStart(9, '0');
+  const identity = SingleKey.fromHex(privkeyHex);
+  const isMainnet = getNetwork() === 'mainnet';
 
-  // Tagged field: payment hash (type 1)
-  const paymentHashWords = hexToWords(paymentHash);
-  const phTag = encodeTaggedField(1, paymentHashWords);
+  walletInstance = await Wallet.create({
+    identity,
+    arkServerUrl: ARK_SERVER_URL,
+    isMainnet,
+    settlementConfig: {
+      vtxoThreshold: 259200,
+      boardingUtxoSweep: true,
+    },
+  });
 
-  // Tagged field: description (type 13)
-  const descWords = stringToWords(description);
-  const descTag = encodeTaggedField(13, descWords);
-
-  // Tagged field: pubkey (type 16)
-  const pkWords = hexToWords(pubkeyHex);
-  const pkTag = encodeTaggedField(16, pkWords);
-
-  // Combine: timestamp + tags
-  const dataWords = [...bech32.toWords(Buffer.from(tsPadded)), ...phTag, ...descTag, ...pkTag];
-
-  return `${hrp}${bech32.encode('qpzry9x8gf2tvdw0s3jn54khce6mua7l', dataWords, 90)}`;
+  vtxoManagerInstance = await walletInstance.getVtxoManager();
+  return walletInstance;
 }
 
-function encodeAmount(amountMsat: number, prefix: string): string {
-  // Convert msats to BTC and encode in bech32
-  const btc = amountMsat / 100_000_000_000_000;
-  // Simplified: just use a numeric string suffix
-  const suffixes: Record<string, string> = {
-    lnbc: '0',
-    lntbs: '0',
-    lntb: '0',
-    lnbcrt: '0',
-  };
-  return (suffixes[prefix] || '0');
+export function getWallet(): WalletType | null {
+  return walletInstance;
 }
 
-function hexToWords(hex: string): number[] {
-  const bytes = Buffer.from(hex, 'hex');
-  return bech32.toWords(bytes);
+export async function resetWallet(): Promise<void> {
+  if (walletInstance) {
+    await walletInstance.dispose();
+  }
+  walletInstance = null;
+  vtxoManagerInstance = null;
 }
 
-function stringToWords(str: string): number[] {
-  const bytes = new TextEncoder().encode(str);
-  return bech32.toWords(bytes);
+export async function getBalance(): Promise<ArkBalance> {
+  if (!walletInstance) return { confirmed: 0, pending: 0, recoverable: 0, total: 0 };
+
+  try {
+    const balance = await walletInstance.getBalance();
+    return {
+      confirmed: Number(balance.available || 0n),
+      pending: Number(balance.preconfirmed || 0n),
+      recoverable: Number(balance.recoverable || 0n),
+      total: Number(balance.total || 0n),
+    };
+  } catch {
+    return { confirmed: 0, pending: 0, recoverable: 0, total: 0 };
+  }
 }
 
-function encodeTaggedField(type: number, words: number[]): number[] {
-  // type (5 bits) + data length (10 bits) + data
-  const typeBits = type;
-  const lenBits = words.length;
-  // Simplified encoding
-  return [typeBits, lenBits, ...words];
+export async function getArkAddress(): Promise<string> {
+  if (!walletInstance) throw new Error('Wallet not initialized');
+  return await walletInstance.getAddress();
 }
 
-export async function getArkAddress(pubkeyHex: string): Promise<string> {
-  return `ark1p${pubkeyHex}`;
+export async function getOnchainAddress(): Promise<string> {
+  if (!walletInstance) throw new Error('Wallet not initialized');
+  return await walletInstance.getBoardingAddress();
 }
 
 export async function createLightningInvoice(
   amountSats: number,
-  memo: string,
-  pubkeyHex: string,
-  network: 'mainnet' | 'signet' = 'mainnet'
+  _memo: string,
 ): Promise<string> {
-  const prefixes: Record<string, string> = {
-    mainnet: 'lnbc',
-    signet: 'lntbs',
-  };
-  const prefix = prefixes[network] || 'lnbc';
-  const amountMsat = amountSats > 0 ? amountSats * 1000 : 0;
-  const paymentHash = generatePaymentHash(pubkeyHex, amountSats);
-  const timestamp = Math.floor(Date.now() / 1000);
+  if (!walletInstance) throw new Error('Wallet not initialized');
 
-  return encodePaymentRequest(
-    prefix,
-    amountSats > 0 ? amountMsat : null,
-    paymentHash,
-    pubkeyHex,
-    timestamp,
-    memo || 'NostrArk payment'
-  );
+  // Create a receive intent for Lightning
+  const receiveIntent = await walletInstance.receive({
+    amount: amountSats,
+  });
+
+  return receiveIntent;
 }
 
-export async function getOnchainAddress(
-  pubkeyHex: string,
-  network: 'mainnet' | 'signet' = 'mainnet'
-): Promise<string> {
-  // Bech32 (SegWit) address format
-  const pubkeyHash = sha256(Buffer.from(pubkeyHex, 'hex'));
-  const witnessProgram = pubkeyHash.slice(0, 20);
-  const words = bech32.toWords(witnessProgram);
-  words.unshift(0); // witness version 0
+export async function getVtxos(): Promise<VtxoInfo[]> {
+  if (!walletInstance) return [];
 
-  const prefix = network === 'signet' ? 'tb' : 'bc';
-  return bech32.encode(prefix, words, 90);
+  try {
+    const vtxos = await walletInstance.getVtxos();
+    return vtxos.map((vtxo) => ({
+      txid: vtxo.txid,
+      vout: vtxo.vout,
+      value: vtxo.value,
+      state: vtxo.virtualStatus.state,
+      batchTxID: vtxo.virtualStatus.batchTxID,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getExpiringVtxos(): Promise<VtxoInfo[]> {
+  if (!vtxoManagerInstance) return [];
+
+  try {
+    const expiring = await vtxoManagerInstance.getExpiringVtxos();
+    return expiring.map((vtxo) => ({
+      txid: vtxo.txid,
+      vout: vtxo.vout,
+      value: vtxo.value,
+      state: vtxo.virtualStatus.state,
+      batchTxID: vtxo.virtualStatus.batchTxID,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function renewVtxos(): Promise<string | null> {
+  if (!vtxoManagerInstance) return null;
+
+  try {
+    return await vtxoManagerInstance.renewVtxos();
+  } catch {
+    return null;
+  }
+}
+
+export async function getRecoverableBalance(): Promise<number> {
+  if (!vtxoManagerInstance) return 0;
+
+  try {
+    const balance = await vtxoManagerInstance.getRecoverableBalance();
+    return Number(balance.recoverable || 0n);
+  } catch {
+    return 0;
+  }
+}
+
+export async function recoverVtxos(): Promise<string | null> {
+  if (!vtxoManagerInstance) return null;
+
+  try {
+    return await vtxoManagerInstance.recoverVtxos();
+  } catch {
+    return null;
+  }
+}
+
+export async function getTransactions(): Promise<ArkTransaction[]> {
+  if (!walletInstance) return [];
+
+  try {
+    const history = await walletInstance.getTransactionHistory();
+    return history.map((tx) => ({
+      id: tx.key.arkTxid || tx.key.boardingTxid || tx.key.commitmentTxid || 'unknown',
+      type: tx.type === 'RECEIVED' ? 'incoming' as const : 'outgoing' as const,
+      amount: tx.amount,
+      timestamp: tx.createdAt * 1000,
+      memo: undefined,
+      network: tx.key.boardingTxid ? 'onchain' as const : 'ark' as const,
+      settled: tx.settled,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export async function sendToAddress(
   to: string,
   amountSats: number,
-  network: 'ark' | 'lightning' | 'onchain',
-  privkey: Uint8Array
-): Promise<{ success: boolean; txId: string }> {
-  return {
-    success: true,
-    txId: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-  };
+  _network: 'ark' | 'lightning' | 'onchain',
+): Promise<SendResult> {
+  if (!walletInstance) throw new Error('Wallet not initialized');
+
+  const txid = await walletInstance.send({
+    address: to,
+    amount: amountSats,
+  });
+
+  return { success: true, txId: txid };
 }
 
-export async function getBalance(pubkeyHex: string): Promise<ArkBalance> {
-  return { confirmed: 0, pending: 0 };
+export async function finalizePendingTxs(): Promise<{ finalized: string[]; pending: string[] }> {
+  if (!walletInstance) return { finalized: [], pending: [] };
+
+  try {
+    return await walletInstance.finalizePendingTxs();
+  } catch {
+    return { finalized: [], pending: [] };
+  }
 }
 
-export async function getTransactions(pubkeyHex: string): Promise<ArkTransaction[]> {
-  return [];
+export function parseInvoiceAmount(invoice: string): number {
+  const lower = invoice.toLowerCase();
+  let prefix = '';
+  if (lower.startsWith('lnbc')) prefix = 'lnbc';
+  else if (lower.startsWith('lntbs')) prefix = 'lntbs';
+  else if (lower.startsWith('lntb')) prefix = 'lntb';
+  else return 0;
+
+  const afterPrefix = invoice.slice(prefix.length);
+  if (!afterPrefix || afterPrefix[0] === '1') return 0;
+
+  let amountStr = '';
+  let multiplier = 1;
+  for (const ch of afterPrefix) {
+    if (ch >= '0' && ch <= '9') {
+      amountStr += ch;
+    } else if (ch === 'p') { multiplier = 1; break; }
+    else if (ch === 'n') { multiplier = 100000; break; }
+    else if (ch === 'u') { multiplier = 100000000; break; }
+    else if (ch === 'm') { multiplier = 100000000000; break; }
+    else break;
+  }
+
+  if (!amountStr) return 0;
+  return Math.round((Number(amountStr) * multiplier) / 1000);
+}
+
+export function estimateFee(amountSats: number, networkType: 'lightning' | 'ark' | 'onchain'): number {
+  switch (networkType) {
+    case 'lightning': return Math.max(1, Math.round(amountSats * 0.001));
+    case 'ark': return Math.max(100, Math.round(amountSats * 0.002));
+    case 'onchain': return Math.max(1000, Math.round(amountSats * 0.01));
+    default: return 0;
+  }
+}
+
+export async function disposeWallet(): Promise<void> {
+  if (walletInstance) {
+    await walletInstance.dispose();
+    walletInstance = null;
+    vtxoManagerInstance = null;
+  }
 }

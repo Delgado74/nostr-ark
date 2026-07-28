@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { type NostrKeyPair } from './lib/nostr';
-import { type ArkBalance, type ArkTransaction, getBalance } from './lib/ark';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { type NostrKeyPair, getPrivkeyHex } from './lib/nostr';
+import { type ArkBalance, type ArkTransaction, type VtxoInfo, initArkWallet, getBalance, getTransactions, renewVtxos, recoverVtxos, getRecoverableBalance, finalizePendingTxs, resetWallet } from './lib/ark';
 import { storage, KEYS } from './lib/storage';
 import { tFunc, getNetwork } from './lib/i18n';
 import { AuthScreen } from './pages/AuthScreen';
@@ -13,64 +13,177 @@ import { SettingsScreen } from './pages/SettingsScreen';
 export const App: React.FC = () => {
   const [keypair, setKeypair] = useState<NostrKeyPair | null>(null);
   const [page, setPage] = useState('auth');
-  const [balance, setBalance] = useState<ArkBalance>({ confirmed: 0, pending: 0 });
+  const [balance, setBalance] = useState<ArkBalance>({ confirmed: 0, pending: 0, recoverable: 0, total: 0 });
   const [transactions, setTransactions] = useState<ArkTransaction[]>([]);
   const [network, setNetworkState] = useState(getNetwork());
+  const [vtxos, setVtxos] = useState<VtxoInfo[]>([]);
+  const [recoverable, setRecoverable] = useState(0);
+  const [walletReady, setWalletReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [renewing, setRenewing] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const refreshTimerRef = useRef<number | null>(null);
+
+  const refreshData = useCallback(async () => {
+    if (!walletReady) return;
+    try {
+      const [b, txs, vtxoList, recBal] = await Promise.all([
+        getBalance(),
+        getTransactions(),
+        import('./lib/ark').then(m => m.getVtxos()),
+        getRecoverableBalance(),
+      ]);
+      setBalance(b);
+      setTransactions(txs);
+      setVtxos(vtxoList);
+      setRecoverable(recBal);
+    } catch {
+      // silent fail
+    }
+  }, [walletReady]);
+
+  const handleInitWallet = useCallback(async (privkeyHex: string) => {
+    try {
+      await initArkWallet(privkeyHex);
+      setWalletReady(true);
+      await finalizePendingTxs();
+    } catch (err) {
+      console.error('Failed to init wallet:', err);
+    }
+  }, []);
 
   useEffect(() => {
     const load = async () => {
       const nsec = await storage.get(KEYS.NSEC);
       if (nsec) {
         try {
-          const { importFromNsec } = await import('./lib/nostr');
+          const { importFromNsec, getPrivkeyHex: pkHex } = await import('./lib/nostr');
           const kp = importFromNsec(nsec);
           setKeypair(kp);
           setPage('dash');
+          const privkeyHex = pkHex(kp);
+          await handleInitWallet(privkeyHex);
         } catch {
           setPage('auth');
         }
       }
+      setLoading(false);
     };
     load();
-  }, []);
-
-  const refreshBalance = useCallback(async () => {
-    if (!keypair) return;
-    const pubkeyHex = Array.from(keypair.pubkey).map(b => b.toString(16).padStart(2, '0')).join('');
-    const b = await getBalance(pubkeyHex);
-    setBalance(b);
-  }, [keypair]);
+  }, [handleInitWallet]);
 
   useEffect(() => {
-    if (keypair) refreshBalance();
-  }, [keypair, refreshBalance]);
+    if (walletReady) {
+      refreshData();
+      refreshTimerRef.current = window.setInterval(refreshData, 30000);
+      return () => {
+        if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+      };
+    }
+  }, [walletReady, refreshData]);
 
-  const handleTx = useCallback((tx: ArkTransaction) => {
-    setTransactions((prev) => [tx, ...prev]);
-    refreshBalance();
-  }, [refreshBalance]);
+  useEffect(() => {
+    if (walletReady) {
+      const autoRenew = async () => {
+        try {
+          const expiring = await import('./lib/ark').then(m => m.getExpiringVtxos());
+          if (expiring.length > 0) {
+            await renewVtxos();
+            await refreshData();
+          }
+        } catch {
+          // silent fail
+        }
+      };
+      autoRenew();
+      const renewInterval = window.setInterval(autoRenew, 6 * 60 * 60 * 1000);
+      return () => clearInterval(renewInterval);
+    }
+  }, [walletReady, refreshData]);
 
-  const handleLogout = useCallback(() => {
+  const handleAuthenticated = useCallback(async (kp: NostrKeyPair) => {
+    setKeypair(kp);
+    setPage('dash');
+    const privkeyHex = getPrivkeyHex(kp);
+    await handleInitWallet(privkeyHex);
+  }, [handleInitWallet]);
+
+  const handleTx = useCallback((_tx: ArkTransaction) => {
+    refreshData();
+  }, [refreshData]);
+
+  const handleLogout = useCallback(async () => {
+    await resetWallet();
+    setWalletReady(false);
     setKeypair(null);
+    setBalance({ confirmed: 0, pending: 0, recoverable: 0, total: 0 });
+    setTransactions([]);
+    setVtxos([]);
+    setRecoverable(0);
     setPage('auth');
   }, []);
 
-  const handleNetworkChange = useCallback(() => {
+  const handleNetworkChange = useCallback(async () => {
     setNetworkState(getNetwork());
-    refreshBalance();
-  }, [refreshBalance]);
+    if (keypair) {
+      await resetWallet();
+      setWalletReady(false);
+      const privkeyHex = getPrivkeyHex(keypair);
+      await handleInitWallet(privkeyHex);
+    }
+  }, [keypair, handleInitWallet]);
+
+  const handleRenew = useCallback(async () => {
+    setRenewing(true);
+    try {
+      await renewVtxos();
+      await refreshData();
+    } finally {
+      setRenewing(false);
+    }
+  }, [refreshData]);
+
+  const handleRecover = useCallback(async () => {
+    setRecovering(true);
+    try {
+      await recoverVtxos();
+      await refreshData();
+    } finally {
+      setRecovering(false);
+    }
+  }, [refreshData]);
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="loading">
+          <div className="spinner"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (page === 'auth' || !keypair) {
-    return <AuthScreen onAuthenticated={(kp) => { setKeypair(kp); setPage('dash'); }} />;
+    return <AuthScreen onAuthenticated={handleAuthenticated} />;
   }
 
   return (
     <div className="app">
       {page === 'dash' && (
-        <Dashboard keypair={keypair} onNavigate={setPage} balance={balance} />
+        <Dashboard
+          keypair={keypair}
+          onNavigate={setPage}
+          balance={balance}
+          vtxos={vtxos}
+          recoverable={recoverable}
+          onRenew={handleRenew}
+          onRecover={handleRecover}
+          renewing={renewing}
+          recovering={recovering}
+        />
       )}
       {page === 'send' && (
-        <SendScreen keypair={keypair} onNavigate={setPage} onTx={handleTx} />
+        <SendScreen keypair={keypair} onNavigate={setPage} onTx={handleTx} balance={balance} />
       )}
       {page === 'receive' && (
         <ReceiveScreen keypair={keypair} onNavigate={setPage} />

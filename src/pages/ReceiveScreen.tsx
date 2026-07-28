@@ -27,24 +27,26 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
 
   useEffect(() => {
     const loadAddress = async () => {
-      let addr = '';
-      switch (networkType) {
-        case 'ark':
-          addr = await getArkAddress(pubkeyHex);
-          break;
-        case 'lightning':
-          addr = await createLightningInvoice(
-            amount ? Number(amount) : 0,
-            memo,
-            pubkeyHex,
-            network
-          );
-          break;
-        case 'onchain':
-          addr = await getOnchainAddress(pubkeyHex, network);
-          break;
+      try {
+        let addr = '';
+        switch (networkType) {
+          case 'ark':
+            addr = await getArkAddress();
+            break;
+          case 'lightning':
+            addr = await createLightningInvoice(
+              amount ? Number(amount) : 0,
+              memo,
+            );
+            break;
+          case 'onchain':
+            addr = await getOnchainAddress();
+            break;
+        }
+        setAddress(addr);
+      } catch {
+        setAddress('');
       }
-      setAddress(addr);
     };
     loadAddress();
   }, [networkType, pubkeyHex, amount, memo, network]);

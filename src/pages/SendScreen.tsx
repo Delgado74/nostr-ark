@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { type NostrKeyPair, identifyInputType } from '../lib/nostr';
-import { sendToAddress, type ArkTransaction } from '../lib/ark';
+import { sendToAddress, parseInvoiceAmount, estimateFee, type ArkTransaction, type ArkBalance } from '../lib/ark';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
 import { Clipboard } from '@capacitor/clipboard';
@@ -10,9 +10,10 @@ interface Props {
   keypair: NostrKeyPair;
   onNavigate: (page: string) => void;
   onTx: (tx: ArkTransaction) => void;
+  balance: ArkBalance;
 }
 
-export function SendScreen({ keypair, onNavigate, onTx }: Props) {
+export function SendScreen({ keypair, onNavigate, onTx, balance }: Props) {
   const [input, setInput] = useState('');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
@@ -21,6 +22,15 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
   const [error, setError] = useState('');
 
   const inputType = identifyInputType(input);
+
+  useEffect(() => {
+    if (inputType === 'lightning' && input.trim()) {
+      const parsed = parseInvoiceAmount(input.trim());
+      if (parsed > 0) {
+        setAmount(parsed.toString());
+      }
+    }
+  }, [input, inputType]);
 
   const handleAmountChange = async (val: string) => {
     setAmount(val);
@@ -49,11 +59,7 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
         resultType: CameraResultType.Base64,
         source: CameraSource.Camera,
       });
-
       if (photo.base64String) {
-        // In a real app, you'd use a QR code library to decode this.
-        // For now, we'll just try to decode the base64 image with a QR scanner
-        // This is a placeholder - in production, use a proper QR scanning library
         setError(tFunc('send.scanning'));
       }
     } catch {
@@ -62,27 +68,26 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !amount || Number(amount) <= 0) return;
     setSending(true);
     setError('');
 
     try {
       const result = await sendToAddress(
         input.trim(),
-        amount ? Number(amount) : 0,
+        Number(amount),
         inputType === 'lightning'
           ? 'lightning'
           : inputType === 'ark'
             ? 'ark'
             : 'onchain',
-        keypair.privkey,
       );
 
       if (result.success) {
         const tx: ArkTransaction = {
           id: result.txId,
           type: 'outgoing',
-          amount: amount ? Number(amount) : 0,
+          amount: Number(amount),
           timestamp: Date.now(),
           memo: memo || undefined,
           network:
@@ -91,6 +96,7 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
               : inputType === 'ark'
                 ? 'ark'
                 : 'onchain',
+          fiatAtTime: fiatEstimate !== '...' ? Number(fiatEstimate.replace(/[^0-9.]/g, '')) : undefined,
         };
         onTx(tx);
         onNavigate('dash');
@@ -101,6 +107,12 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
       setSending(false);
     }
   };
+
+  const sendAmount = amount && Number(amount) > 0 ? Number(amount) : 0;
+  const fee = sendAmount > 0 ? estimateFee(sendAmount, inputType === 'lightning' ? 'lightning' : inputType === 'ark' ? 'ark' : 'onchain') : 0;
+  const total = sendAmount + fee;
+  const insufficientBalance = total > 0 && balance.confirmed < total;
+  const canSend = input.trim() && sendAmount > 0 && inputType !== 'unknown' && !insufficientBalance;
 
   return (
     <div>
@@ -147,11 +159,9 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
         {input && inputType !== 'unknown' && (
           <div style={{ marginTop: 6 }}>
             <span className="type-badge">
-              {inputType === 'lightning' &&
-                `⚡ ${tFunc('send.type.lightning')}`}
+              {inputType === 'lightning' && `⚡ ${tFunc('send.type.lightning')}`}
               {inputType === 'ark' && `🔗 ${tFunc('send.type.ark')}`}
-              {inputType === 'onchain' &&
-                `₿ ${tFunc('send.type.onchain')}`}
+              {inputType === 'onchain' && `₿ ${tFunc('send.type.onchain')}`}
             </span>
           </div>
         )}
@@ -183,6 +193,37 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
         />
       </div>
 
+      {sendAmount > 0 && inputType !== 'unknown' && (
+        <div className="card card-sm" style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+            <span style={{ color: 'var(--text2)' }}>{tFunc('send.amountLabel')}</span>
+            <span>{sendAmount.toLocaleString('es-ES')} sats</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+            <span style={{ color: 'var(--text2)' }}>Fee estimado</span>
+            <span>{fee.toLocaleString('es-ES')} sats</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 4 }}>
+            <span>Total</span>
+            <span style={{ color: 'var(--accent)' }}>{total.toLocaleString('es-ES')} sats</span>
+          </div>
+        </div>
+      )}
+
+      {insufficientBalance && (
+        <div className="card card-sm" style={{ marginBottom: 12, borderColor: 'var(--red)', background: 'rgba(231, 76, 60, 0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--red)' }}>
+            <span>⚠️</span>
+            <div>
+              <div style={{ fontWeight: 600 }}>Saldo insuficiente</div>
+              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
+                Disponible: {balance.confirmed.toLocaleString('es-ES')} sats | Necesitas: {total.toLocaleString('es-ES')} sats
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <p style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>
           {error}
@@ -192,7 +233,7 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
       <button
         className="btn btn-primary"
         onClick={handleSend}
-        disabled={!input.trim() || sending}
+        disabled={!canSend || sending}
       >
         {sending ? '...' : `↗ ${tFunc('send.confirm')}`}
       </button>

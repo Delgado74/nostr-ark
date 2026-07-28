@@ -21,6 +21,16 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.history': 'Historial',
     'dash.settings': 'Ajustes',
     'dash.noTx': 'Sin transacciones aún',
+    'dash.pending': 'pendiente',
+    'dash.vtxoStatus': 'Estado VTXO',
+    'dash.vtxoEmpty': 'Sin VTXOs todavía',
+    'dash.vtxoSettled': 'Confirmados',
+    'dash.vtxoPreconfirmed': 'Pre-confirmados',
+    'dash.vtxoRenew': 'Renovar',
+    'dash.vtxoRenewing': 'Renovando...',
+    'dash.vtxoRecoverable': 'recuperables',
+    'dash.vtxoRecover': 'Recuperar',
+    'dash.vtxoRecovering': 'Recuperando...',
 
     // Send
     'send.title': 'Enviar',
@@ -98,6 +108,16 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.history': 'History',
     'dash.settings': 'Settings',
     'dash.noTx': 'No transactions yet',
+    'dash.pending': 'pending',
+    'dash.vtxoStatus': 'VTXO Status',
+    'dash.vtxoEmpty': 'No VTXOs yet',
+    'dash.vtxoSettled': 'Settled',
+    'dash.vtxoPreconfirmed': 'Pre-confirmed',
+    'dash.vtxoRenew': 'Renew',
+    'dash.vtxoRenewing': 'Renewing...',
+    'dash.vtxoRecoverable': 'recoverable',
+    'dash.vtxoRecover': 'Recover',
+    'dash.vtxoRecovering': 'Recovering...',
 
     // Send
     'send.title': 'Send',

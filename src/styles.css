@@ -584,6 +584,100 @@ textarea.input {
   border-radius: 2px;
 }
 
+/* VTXO Card */
+.vtxo-card {
+  padding: 16px;
+}
+
+.vtxo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.vtxo-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.vtxo-count {
+  font-size: 12px;
+  color: var(--text2);
+  background: var(--surface2);
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+
+.vtxo-empty {
+  font-size: 13px;
+  color: var(--text2);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.vtxo-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.vtxo-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.vtxo-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.vtxo-dot.settled {
+  background: var(--green);
+}
+
+.vtxo-dot.preconfirmed {
+  background: var(--accent);
+}
+
+.vtxo-stat-label {
+  color: var(--text2);
+  flex: 1;
+}
+
+.vtxo-stat-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.vtxo-btn {
+  width: 100%;
+  margin-top: 0;
+}
+
+.vtxo-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+
+.vtxo-recoverable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vtxo-recoverable-info {
+  font-size: 13px;
+  color: var(--green);
+}
+
 /* Network tabs */
 .network-tabs {
   display: flex;
