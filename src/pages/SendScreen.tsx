@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { type NostrKeyPair, identifyInputType } from '../lib/nostr';
 import { sendToAddress, parseInvoiceAmount, estimateFee, type ArkTransaction, type ArkBalance } from '../lib/ark';
 import * as lnbits from '../lib/lnbits';
@@ -26,15 +26,6 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
 
   const inputType = identifyInputType(input);
 
-  useEffect(() => {
-    if (inputType === 'lightning' && input.trim()) {
-      const parsed = parseInvoiceAmount(input.trim());
-      if (parsed > 0) {
-        setAmount(parsed.toString());
-      }
-    }
-  }, [input, inputType]);
-
   const handleAmountChange = async (val: string) => {
     setAmount(val);
     if (val && Number(val) > 0) {
@@ -48,7 +39,14 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   const handlePaste = async () => {
     try {
       const { value } = await Clipboard.read();
-      if (value) setInput(value.replace(/^lightning:/i, ''));
+      if (value) {
+        const clean = value.replace(/^lightning:/i, '');
+        setInput(clean);
+        const parsed = parseInvoiceAmount(clean);
+        if (parsed > 0) {
+          setAmount(parsed.toString());
+        }
+      }
     } catch {
       // clipboard unavailable
     }
@@ -59,9 +57,14 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   };
 
   const handleQrResult = (data: string) => {
-    setInput(data.replace(/^lightning:/i, ''));
+    const clean = data.replace(/^lightning:/i, '');
+    setInput(clean);
     setShowScanner(false);
     setError('');
+    const parsed = parseInvoiceAmount(clean);
+    if (parsed > 0) {
+      setAmount(parsed.toString());
+    }
   };
 
   const handleSend = async () => {
@@ -139,8 +142,13 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
           placeholder={tFunc('send.invoicePlaceholder')}
           value={input}
           onChange={(e) => {
-            setInput(e.target.value.replace(/^lightning:/i, ''));
+            const val = e.target.value.replace(/^lightning:/i, '');
+            setInput(val);
             setError('');
+            const parsed = parseInvoiceAmount(val);
+            if (parsed > 0) {
+              setAmount(parsed.toString());
+            }
           }}
           style={{ marginBottom: 8 }}
         />
