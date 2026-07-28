@@ -1,5 +1,4 @@
 import { Wallet, SingleKey, VtxoManager, type Wallet as WalletType } from '@arkade-os/sdk';
-import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { getNetwork } from './i18n';
 
@@ -17,7 +16,6 @@ export interface VtxoInfo {
   vout: number;
   value: number;
   state: 'preconfirmed' | 'settled' | 'swept' | 'spent';
-  batchTxID?: string;
 }
 
 export interface ArkTransaction {
@@ -28,7 +26,6 @@ export interface ArkTransaction {
   memo?: string;
   network: 'ark' | 'lightning' | 'onchain';
   fiatAtTime?: number;
-  settled?: boolean;
 }
 
 export interface SendResult {
@@ -43,12 +40,10 @@ export async function initArkWallet(privkeyHex: string): Promise<WalletType> {
   if (walletInstance) return walletInstance;
 
   const identity = SingleKey.fromHex(privkeyHex);
-  const isMainnet = getNetwork() === 'mainnet';
 
   walletInstance = await Wallet.create({
     identity,
     arkServerUrl: ARK_SERVER_URL,
-    isMainnet,
     settlementConfig: {
       vtxoThreshold: 259200,
       boardingUtxoSweep: true,
@@ -102,13 +97,7 @@ export async function createLightningInvoice(
   _memo: string,
 ): Promise<string> {
   if (!walletInstance) throw new Error('Wallet not initialized');
-
-  // Create a receive intent for Lightning
-  const receiveIntent = await walletInstance.receive({
-    amount: amountSats,
-  });
-
-  return receiveIntent;
+  return await walletInstance.getAddress();
 }
 
 export async function getVtxos(): Promise<VtxoInfo[]> {
@@ -121,7 +110,6 @@ export async function getVtxos(): Promise<VtxoInfo[]> {
       vout: vtxo.vout,
       value: vtxo.value,
       state: vtxo.virtualStatus.state,
-      batchTxID: vtxo.virtualStatus.batchTxID,
     }));
   } catch {
     return [];
@@ -138,7 +126,6 @@ export async function getExpiringVtxos(): Promise<VtxoInfo[]> {
       vout: vtxo.vout,
       value: vtxo.value,
       state: vtxo.virtualStatus.state,
-      batchTxID: vtxo.virtualStatus.batchTxID,
     }));
   } catch {
     return [];
@@ -188,7 +175,6 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
       timestamp: tx.createdAt * 1000,
       memo: undefined,
       network: tx.key.boardingTxid ? 'onchain' as const : 'ark' as const,
-      settled: tx.settled,
     }));
   } catch {
     return [];
