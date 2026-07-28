@@ -7,48 +7,81 @@ interface Props {
 }
 
 export function QrScanner({ onScan, onClose }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const videoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const id = 'qr-scanner-' + Math.random().toString(36).slice(2);
-    const el = document.createElement('div');
-    el.id = id;
-    containerRef.current?.appendChild(el);
+    let scanner: Html5Qrcode | null = null;
 
-    const scanner = new Html5Qrcode(id);
-    scannerRef.current = scanner;
+    const start = async () => {
+      try {
+        scanner = new Html5Qrcode('qr-reader');
+        scannerRef.current = scanner;
 
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (decodedText) => {
-        scanner.stop().catch(() => {});
-        onScan(decodedText);
-      },
-      () => {},
-    ).catch(() => {});
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            scanner?.stop().catch(() => {});
+            onScan(decodedText);
+          },
+          () => {},
+        );
+      } catch (err) {
+        console.error('QR scanner error:', err);
+        onClose();
+      }
+    };
+
+    const timer = setTimeout(start, 200);
 
     return () => {
-      scanner.stop().catch(() => {});
+      clearTimeout(timer);
+      if (scanner) {
+        scanner.stop().catch(() => {});
+      }
     };
-  }, [onScan]);
+  }, [onScan, onClose]);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="qr-scanner-container" onClick={(e) => e.stopPropagation()}>
-        <div
-          ref={containerRef}
-          style={{ width: '100%', maxWidth: 300, margin: '0 auto' }}
-        />
-        <button
-          className="btn btn-secondary"
-          style={{ marginTop: 12, width: '100%' }}
-          onClick={onClose}
-        >
-          Cancelar
-        </button>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.9)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+      }}
+    >
+      <div
+        style={{
+          width: 280,
+          height: 280,
+          overflow: 'hidden',
+          borderRadius: 12,
+          background: '#000',
+        }}
+      >
+        <div id="qr-reader" ref={videoRef} />
       </div>
+
+      <p style={{ color: '#fff', marginTop: 16, fontSize: 14 }}>
+        Apunta al código QR
+      </p>
+
+      <button
+        className="btn btn-secondary"
+        style={{ marginTop: 24, width: 200 }}
+        onClick={onClose}
+      >
+        Cancelar
+      </button>
     </div>
   );
 }

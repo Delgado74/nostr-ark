@@ -421,6 +421,18 @@ textarea.input {
   max-width: 100%;
 }
 
+#qr-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+#qr-reader img,
+#qr-reader__scan_region {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .modal-handle {
   width: 40px;
   height: 4px;
