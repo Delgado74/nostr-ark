@@ -47,6 +47,21 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
     setShowQrScanner(false);
     setLnbitsLoading(true);
     setLnbitsError('');
+
+    const raw = data.replace(/^lightning:/, '').trim();
+    let extractedKey = raw;
+    try {
+      const parsed = JSON.parse(raw);
+      extractedKey = parsed.admin || parsed.invoice || parsed.key || raw;
+      if (parsed.url) {
+        setLnbitsUrl(parsed.url);
+      }
+    } catch {
+      // plain key
+    }
+
+    setLnbitsKey(extractedKey);
+
     try {
       const success = await lnbits.connect(data);
       if (success) {
@@ -54,13 +69,6 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
         setShowLnbitsModal(false);
         const wallet = await lnbits.getWalletDetails();
         setLnbitsName(wallet.name);
-      } else {
-        const config = await lnbits.getConfig();
-        if (config && config.url) {
-          setLnbitsError(tFunc('settings.lnbitsError'));
-        } else {
-          setLnbitsError('Key guardada. Ingresa la URL manualmente y presiona Conectar');
-        }
       }
     } catch {
       setLnbitsError(tFunc('settings.lnbitsError'));
@@ -325,7 +333,7 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
               <label>{tFunc('settings.lnbitsUrl')}</label>
               <input
                 className="input"
-                placeholder="https://lnbits.example.com"
+                placeholder="Introduce la URL manualmente"
                 value={lnbitsUrl}
                 onChange={(e) => setLnbitsUrl(e.target.value)}
               />
@@ -335,7 +343,8 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
               <label>{tFunc('settings.lnbitsKey')}</label>
               <input
                 className="input"
-                placeholder="nbkey_..."
+                type="password"
+                placeholder="Escanea QR en tu billetera LNbits"
                 value={lnbitsKey}
                 onChange={(e) => setLnbitsKey(e.target.value)}
               />
