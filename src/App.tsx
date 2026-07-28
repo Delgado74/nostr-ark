@@ -87,12 +87,6 @@ export const App: React.FC = () => {
           <button className={`nav-item ${page === 'dash' ? 'active' : ''}`} onClick={() => setPage('dash')}>
             <span className="nav-icon">🏠</span>
           </button>
-          <button className={`nav-item ${page === 'send' ? 'active' : ''}`} onClick={() => setPage('send')}>
-            <span className="nav-icon">↗</span>
-          </button>
-          <button className={`nav-item ${page === 'receive' ? 'active' : ''}`} onClick={() => setPage('receive')}>
-            <span className="nav-icon">↙</span>
-          </button>
           <button className={`nav-item ${page === 'history' ? 'active' : ''}`} onClick={() => setPage('history')}>
             <span className="nav-icon">⏱</span>
           </button>

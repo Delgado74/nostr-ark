@@ -583,3 +583,40 @@ textarea.input {
   background: var(--border);
   border-radius: 2px;
 }
+
+/* Network tabs */
+.network-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.network-tab {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.network-tab.active {
+  border-color: var(--accent);
+  background: rgba(247, 147, 26, 0.1);
+  color: var(--accent);
+}
+
+/* Testnet badge */
+.network-badge.testnet {
+  background: rgba(52, 152, 219, 0.15);
+  color: var(--blue);
+}
+
+.network-badge.testnet .dot {
+  background: var(--blue);
+}

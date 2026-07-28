@@ -17,7 +17,8 @@ export interface ArkTransaction {
 }
 
 export async function getArkAddress(pubkeyHex: string): Promise<string> {
-  return `ark1${pubkeyHex}`;
+  // Ark v3+ address format
+  return `ark1p${pubkeyHex}`;
 }
 
 export async function createLightningInvoice(
@@ -25,7 +26,17 @@ export async function createLightningInvoice(
   memo: string,
   pubkeyHex: string
 ): Promise<string> {
-  return `lnbc${amountSats}${pubkeyHex.slice(0, 20)}`;
+  // Lightning invoice format (simplified for demo)
+  // In production, this would call an LND/CLN node to generate a real invoice
+  const timestamp = Math.floor(Date.now() / 1000);
+  const prefix = amountSats > 0 ? 'lnbc' : 'lnbc';
+  return `${prefix}${amountSats}${timestamp}${pubkeyHex.slice(0, 16)}`;
+}
+
+export async function getOnchainAddress(pubkeyHex: string): Promise<string> {
+  // On-chain address format (simplified for demo)
+  // In production, this would derive from the pubkey using proper Bitcoin address derivation
+  return `bc1q${pubkeyHex.slice(0, 38)}`;
 }
 
 export async function sendToAddress(

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { type NostrKeyPair, getPubkeyHex } from '../lib/nostr';
-import { getArkAddress } from '../lib/ark';
+import { getArkAddress, createLightningInvoice, getOnchainAddress } from '../lib/ark';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
 import { Clipboard } from '@capacitor/clipboard';
+import QRCode from 'qrcode';
 
 type NetworkType = 'lightning' | 'ark' | 'onchain';
 
@@ -16,15 +17,35 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [copied, setCopied] = useState(false);
-  const [arkAddress, setArkAddress] = useState('');
+  const [address, setAddress] = useState('');
   const [fiatValue, setFiatValue] = useState('...');
   const [networkType, setNetworkType] = useState<NetworkType>('ark');
+  const qrRef = useRef<HTMLCanvasElement>(null);
 
   const pubkeyHex = getPubkeyHex(keypair);
 
   useEffect(() => {
-    getArkAddress(pubkeyHex).then(setArkAddress);
-  }, [pubkeyHex]);
+    const loadAddress = async () => {
+      let addr = '';
+      switch (networkType) {
+        case 'ark':
+          addr = await getArkAddress(pubkeyHex);
+          break;
+        case 'lightning':
+          addr = await createLightningInvoice(
+            amount ? Number(amount) : 0,
+            memo,
+            pubkeyHex
+          );
+          break;
+        case 'onchain':
+          addr = await getOnchainAddress(pubkeyHex);
+          break;
+      }
+      setAddress(addr);
+    };
+    loadAddress();
+  }, [networkType, pubkeyHex, amount, memo]);
 
   useEffect(() => {
     if (amount && Number(amount) > 0) {
@@ -34,9 +55,22 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
     }
   }, [amount]);
 
+  useEffect(() => {
+    if (qrRef.current && address) {
+      QRCode.toCanvas(qrRef.current, address, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff',
+        },
+      });
+    }
+  }, [address]);
+
   const handleCopy = async () => {
     try {
-      await Clipboard.write({ string: arkAddress });
+      await Clipboard.write({ string: address });
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -82,7 +116,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
         <div
           style={{
             textAlign: 'center',
-            marginBottom: 8,
+            marginBottom: 12,
             fontSize: 13,
             color: 'var(--text2)',
           }}
@@ -99,21 +133,19 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
             marginBottom: 12,
           }}
         >
-          <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: 64 }}>{networkIcon[networkType]}</span>
-            <div
-              style={{
-                fontSize: 10,
-                color: '#333',
-                marginTop: 8,
-                fontFamily: 'monospace',
-                maxWidth: 200,
-                wordBreak: 'break-all',
-              }}
-            >
-              {arkAddress}
-            </div>
-          </div>
+          <canvas ref={qrRef} />
+        </div>
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--text2)',
+            wordBreak: 'break-all',
+            textAlign: 'center',
+            padding: '0 8px',
+            lineHeight: 1.4,
+          }}
+        >
+          {address}
         </div>
       </div>
 
