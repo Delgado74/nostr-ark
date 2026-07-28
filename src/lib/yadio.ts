@@ -13,10 +13,27 @@ export const getCurrency = () => currentCurrency;
 
 export async function getSatsPerUnit(currency: Currency): Promise<number> {
   try {
-    const res = await fetch(`${YADIO_API}/v2/btc/${currency}`);
+    const res = await fetch(`${YADIO_API}/json/USD`);
     if (!res.ok) return getFallbackRate(currency);
-    const data = await res.json();
-    return data.rate || getFallbackRate(currency);
+    const data = await res.json() as {
+      BTC?: { price?: number; eur?: number };
+      CUP?: { rate?: number };
+      EUR?: { rate?: number };
+    };
+
+    if (!data.BTC?.price) return getFallbackRate(currency);
+    const btcUsd = data.BTC.price;
+
+    switch (currency) {
+      case 'USD':
+        return btcUsd;
+      case 'EUR':
+        return data.BTC.eur || Math.round(btcUsd / (data.EUR?.rate || 1));
+      case 'CUP':
+        return Math.round(btcUsd * (data.CUP?.rate || 675));
+      default:
+        return getFallbackRate(currency);
+    }
   } catch {
     return getFallbackRate(currency);
   }
@@ -24,9 +41,9 @@ export async function getSatsPerUnit(currency: Currency): Promise<number> {
 
 export function getFallbackRate(currency: Currency): number {
   const fallbacks: Record<Currency, number> = {
-    CUP: 60000000,
-    USD: 110000,
-    EUR: 100000,
+    CUP: 43000000,
+    USD: 64000,
+    EUR: 56000,
   };
   return fallbacks[currency];
 }
