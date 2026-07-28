@@ -8,6 +8,7 @@ interface Props {
   keypair: NostrKeyPair;
   onNavigate: (page: string) => void;
   balance: ArkBalance;
+  lnbitsBalance: number;
   vtxos: VtxoInfo[];
   recoverable: number;
   onRenew: () => void;
@@ -16,14 +17,16 @@ interface Props {
   recovering: boolean;
 }
 
-export function Dashboard({ keypair, onNavigate, balance, vtxos, recoverable, onRenew, onRecover, renewing, recovering }: Props) {
+export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, recoverable, onRenew, onRecover, renewing, recovering }: Props) {
   const [fiatValue, setFiatValue] = useState('...');
   const pubkeyHex = getPubkeyHex(keypair);
   const network = getNetwork();
 
+  const totalConfirmed = balance.confirmed + lnbitsBalance;
+
   useEffect(() => {
-    satsToFiat(balance.confirmed, getCurrency()).then(setFiatValue);
-  }, [balance.confirmed]);
+    satsToFiat(totalConfirmed, getCurrency()).then(setFiatValue);
+  }, [totalConfirmed]);
 
   const settledCount = vtxos.filter(v => v.state === 'settled').length;
   const preconfirmedCount = vtxos.filter(v => v.state === 'preconfirmed').length;
@@ -44,12 +47,18 @@ export function Dashboard({ keypair, onNavigate, balance, vtxos, recoverable, on
       <div className="balance-section">
         <div className="balance-label">{tFunc('dash.balance')}</div>
         <div className="balance-sats">
-          {balance.confirmed.toLocaleString('es-ES')} sats
+          {totalConfirmed.toLocaleString('es-ES')} sats
         </div>
         <div className="balance-fiat">≈ {fiatValue}</div>
         {balance.pending > 0 && (
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
             +{balance.pending.toLocaleString('es-ES')} {tFunc('dash.pending')}
+          </div>
+        )}
+        {lnbitsBalance > 0 && (
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4, display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <span>⚡ LNbits: {lnbitsBalance.toLocaleString('es-ES')}</span>
+            <span>🔗 Ark: {balance.confirmed.toLocaleString('es-ES')}</span>
           </div>
         )}
       </div>

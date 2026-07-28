@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { type NostrKeyPair, identifyInputType } from '../lib/nostr';
 import { sendToAddress, parseInvoiceAmount, estimateFee, type ArkTransaction, type ArkBalance } from '../lib/ark';
+import * as lnbits from '../lib/lnbits';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
 import { Clipboard } from '@capacitor/clipboard';
@@ -11,9 +12,10 @@ interface Props {
   onNavigate: (page: string) => void;
   onTx: (tx: ArkTransaction) => void;
   balance: ArkBalance;
+  lnbitsBalance: number;
 }
 
-export function SendScreen({ keypair, onNavigate, onTx, balance }: Props) {
+export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }: Props) {
   const [input, setInput] = useState('');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
@@ -73,33 +75,39 @@ export function SendScreen({ keypair, onNavigate, onTx, balance }: Props) {
     setError('');
 
     try {
-      const result = await sendToAddress(
-        input.trim(),
-        Number(amount),
-        inputType === 'lightning'
-          ? 'lightning'
-          : inputType === 'ark'
-            ? 'ark'
-            : 'onchain',
-      );
-
-      if (result.success) {
+      if (inputType === 'lightning') {
+        const result = await lnbits.payInvoice(input.trim());
         const tx: ArkTransaction = {
-          id: result.txId,
+          id: result.payment_hash,
           type: 'outgoing',
           amount: Number(amount),
           timestamp: Date.now(),
           memo: memo || undefined,
-          network:
-            inputType === 'lightning'
-              ? 'lightning'
-              : inputType === 'ark'
-                ? 'ark'
-                : 'onchain',
+          network: 'lightning',
           fiatAtTime: fiatEstimate !== '...' ? Number(fiatEstimate.replace(/[^0-9.]/g, '')) : undefined,
         };
         onTx(tx);
         onNavigate('dash');
+      } else {
+        const result = await sendToAddress(
+          input.trim(),
+          Number(amount),
+          inputType === 'ark' ? 'ark' : 'onchain',
+        );
+
+        if (result.success) {
+          const tx: ArkTransaction = {
+            id: result.txId,
+            type: 'outgoing',
+            amount: Number(amount),
+            timestamp: Date.now(),
+            memo: memo || undefined,
+            network: inputType === 'ark' ? 'ark' : 'onchain',
+            fiatAtTime: fiatEstimate !== '...' ? Number(fiatEstimate.replace(/[^0-9.]/g, '')) : undefined,
+          };
+          onTx(tx);
+          onNavigate('dash');
+        }
       }
     } catch {
       setError('Error al enviar');
@@ -111,7 +119,8 @@ export function SendScreen({ keypair, onNavigate, onTx, balance }: Props) {
   const sendAmount = amount && Number(amount) > 0 ? Number(amount) : 0;
   const fee = sendAmount > 0 ? estimateFee(sendAmount, inputType === 'lightning' ? 'lightning' : inputType === 'ark' ? 'ark' : 'onchain') : 0;
   const total = sendAmount + fee;
-  const insufficientBalance = total > 0 && balance.confirmed < total;
+  const availableBalance = inputType === 'lightning' ? lnbitsBalance : balance.confirmed;
+  const insufficientBalance = total > 0 && availableBalance < total;
   const canSend = input.trim() && sendAmount > 0 && inputType !== 'unknown' && !insufficientBalance;
 
   return (
@@ -217,7 +226,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance }: Props) {
             <div>
               <div style={{ fontWeight: 600 }}>Saldo insuficiente</div>
               <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
-                Disponible: {balance.confirmed.toLocaleString('es-ES')} sats | Necesitas: {total.toLocaleString('es-ES')} sats
+                Disponible: {availableBalance.toLocaleString('es-ES')} sats | Necesitas: {total.toLocaleString('es-ES')} sats
               </div>
             </div>
           </div>

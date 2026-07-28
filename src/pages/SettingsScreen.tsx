@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { type NostrKeyPair } from '../lib/nostr';
 import { storage } from '../lib/storage';
 import { setLang, getLang, tFunc, type Lang, setNetwork, getNetwork, type Network } from '../lib/i18n';
 import { setCurrency, getCurrency, type Currency } from '../lib/yadio';
 import { Clipboard } from '@capacitor/clipboard';
+import * as lnbits from '../lib/lnbits';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface Props {
   keypair: NostrKeyPair;
@@ -16,6 +18,84 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
   const [showBackup, setShowBackup] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [lnbitsConnected, setLnbitsConnected] = useState(false);
+  const [lnbitsName, setLnbitsName] = useState('');
+  const [showLnbitsModal, setShowLnbitsModal] = useState(false);
+  const [lnbitsUrl, setLnbitsUrl] = useState('');
+  const [lnbitsKey, setLnbitsKey] = useState('');
+  const [lnbitsError, setLnbitsError] = useState('');
+  const [lnbitsLoading, setLnbitsLoading] = useState(false);
+
+  useEffect(() => {
+    const checkLnbits = async () => {
+      const connected = await lnbits.isConnected();
+      setLnbitsConnected(connected);
+      if (connected) {
+        try {
+          const wallet = await lnbits.getWalletDetails();
+          setLnbitsName(wallet.name);
+        } catch {
+          // ignore
+        }
+      }
+    };
+    checkLnbits();
+  }, []);
+
+  const handleScanLnbitsQr = async () => {
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+      });
+      if (photo.base64String) {
+        setLnbitsLoading(true);
+        setLnbitsError('');
+        const success = await lnbits.connect(atob(photo.base64String));
+        if (success) {
+          setLnbitsConnected(true);
+          setShowLnbitsModal(false);
+          const wallet = await lnbits.getWalletDetails();
+          setLnbitsName(wallet.name);
+        } else {
+          setLnbitsError(tFunc('settings.lnbitsError'));
+        }
+      }
+    } catch {
+      // camera cancelled
+    } finally {
+      setLnbitsLoading(false);
+    }
+  };
+
+  const handleConnectLnbitsManual = async () => {
+    if (!lnbitsUrl || !lnbitsKey) return;
+    setLnbitsLoading(true);
+    setLnbitsError('');
+    try {
+      const success = await lnbits.connectManual(lnbitsUrl, lnbitsKey);
+      if (success) {
+        setLnbitsConnected(true);
+        setShowLnbitsModal(false);
+        const wallet = await lnbits.getWalletDetails();
+        setLnbitsName(wallet.name);
+      } else {
+        setLnbitsError(tFunc('settings.lnbitsError'));
+      }
+    } catch {
+      setLnbitsError(tFunc('settings.lnbitsError'));
+    } finally {
+      setLnbitsLoading(false);
+    }
+  };
+
+  const handleDisconnectLnbits = async () => {
+    await lnbits.disconnect();
+    setLnbitsConnected(false);
+    setLnbitsName('');
+  };
 
   const handleCopyNsec = async () => {
     try {
@@ -92,6 +172,30 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
           </select>
         </div>
 
+        <div className="setting-item">
+          <span className="setting-label">⚡ LNbits</span>
+          {lnbitsConnected ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: 'var(--green)' }}>
+                ✓ {lnbitsName || tFunc('settings.lnbitsConnected')}
+              </span>
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={handleDisconnectLnbits}
+              >
+                {tFunc('settings.lnbitsDisconnect')}
+              </button>
+            </div>
+          ) : (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowLnbitsModal(true)}
+            >
+              {tFunc('settings.lnbits')} →
+            </button>
+          )}
+        </div>
+
         <div
           className="setting-item"
           style={{ cursor: 'pointer' }}
@@ -161,6 +265,97 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
               className="btn btn-secondary"
               style={{ marginTop: 8 }}
               onClick={() => setShowBackup(false)}
+            >
+              {tFunc('settings.close')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showLnbitsModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowLnbitsModal(false);
+            setLnbitsError('');
+          }}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-handle"></div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+              ⚡ {tFunc('settings.lnbits')}
+            </h2>
+            <p
+              style={{
+                fontSize: 13,
+                color: 'var(--text2)',
+                marginBottom: 16,
+              }}
+            >
+              {tFunc('settings.scanQrInfo')}
+            </p>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleScanLnbitsQr}
+              disabled={lnbitsLoading}
+              style={{ marginBottom: 8 }}
+            >
+              {lnbitsLoading ? '...' : `📷 ${tFunc('settings.scanQr')}`}
+            </button>
+
+            <div
+              style={{
+                textAlign: 'center',
+                fontSize: 12,
+                color: 'var(--text2)',
+                margin: '12px 0',
+              }}
+            >
+              — {tFunc('settings.lnbitsManual')} —
+            </div>
+
+            <div className="input-group">
+              <label>{tFunc('settings.lnbitsUrl')}</label>
+              <input
+                className="input"
+                placeholder="https://lnbits.example.com"
+                value={lnbitsUrl}
+                onChange={(e) => setLnbitsUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>{tFunc('settings.lnbitsKey')}</label>
+              <input
+                className="input"
+                placeholder="nbkey_..."
+                value={lnbitsKey}
+                onChange={(e) => setLnbitsKey(e.target.value)}
+              />
+            </div>
+
+            {lnbitsError && (
+              <p style={{ color: 'var(--red)', fontSize: 13, marginBottom: 12 }}>
+                {lnbitsError}
+              </p>
+            )}
+
+            <button
+              className="btn btn-primary"
+              onClick={handleConnectLnbitsManual}
+              disabled={lnbitsLoading || !lnbitsUrl || !lnbitsKey}
+            >
+              {lnbitsLoading ? '...' : `⚡ ${tFunc('settings.lnbitsConnect')}`}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              style={{ marginTop: 8 }}
+              onClick={() => {
+                setShowLnbitsModal(false);
+                setLnbitsError('');
+              }}
             >
               {tFunc('settings.close')}
             </button>

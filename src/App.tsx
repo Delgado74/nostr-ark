@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { type NostrKeyPair, getPrivkeyHex } from './lib/nostr';
 import { type ArkBalance, type ArkTransaction, type VtxoInfo, initArkWallet, getBalance, getTransactions, renewVtxos, recoverVtxos, getRecoverableBalance, finalizePendingTxs, resetWallet } from './lib/ark';
+import * as lnbits from './lib/lnbits';
 import { storage, KEYS } from './lib/storage';
 import { tFunc, getNetwork } from './lib/i18n';
 import { AuthScreen } from './pages/AuthScreen';
@@ -14,6 +15,7 @@ export const App: React.FC = () => {
   const [keypair, setKeypair] = useState<NostrKeyPair | null>(null);
   const [page, setPage] = useState('auth');
   const [balance, setBalance] = useState<ArkBalance>({ confirmed: 0, pending: 0, recoverable: 0, total: 0 });
+  const [lnbitsBalance, setLnbitsBalance] = useState(0);
   const [transactions, setTransactions] = useState<ArkTransaction[]>([]);
   const [network, setNetworkState] = useState(getNetwork());
   const [vtxos, setVtxos] = useState<VtxoInfo[]>([]);
@@ -27,16 +29,22 @@ export const App: React.FC = () => {
   const refreshData = useCallback(async () => {
     if (!walletReady) return;
     try {
-      const [b, txs, vtxoList, recBal] = await Promise.all([
+      const [b, txs, vtxoList, recBal, lnTx] = await Promise.all([
         getBalance(),
         getTransactions(),
         import('./lib/ark').then(m => m.getVtxos()),
         getRecoverableBalance(),
+        lnbits.isConnected().then(c => c ? lnbits.getTransactions() : []),
       ]);
       setBalance(b);
-      setTransactions(txs);
       setVtxos(vtxoList);
       setRecoverable(recBal);
+
+      const lnBal = await lnbits.isConnected().then(c => c ? lnbits.getBalance() : 0);
+      setLnbitsBalance(lnBal);
+
+      const allTxs = [...txs, ...lnTx].sort((a, b) => b.timestamp - a.timestamp);
+      setTransactions(allTxs);
     } catch {
       // silent fail
     }
@@ -117,6 +125,7 @@ export const App: React.FC = () => {
     setWalletReady(false);
     setKeypair(null);
     setBalance({ confirmed: 0, pending: 0, recoverable: 0, total: 0 });
+    setLnbitsBalance(0);
     setTransactions([]);
     setVtxos([]);
     setRecoverable(0);
@@ -174,6 +183,7 @@ export const App: React.FC = () => {
           keypair={keypair}
           onNavigate={setPage}
           balance={balance}
+          lnbitsBalance={lnbitsBalance}
           vtxos={vtxos}
           recoverable={recoverable}
           onRenew={handleRenew}
@@ -183,7 +193,7 @@ export const App: React.FC = () => {
         />
       )}
       {page === 'send' && (
-        <SendScreen keypair={keypair} onNavigate={setPage} onTx={handleTx} balance={balance} />
+        <SendScreen keypair={keypair} onNavigate={setPage} onTx={handleTx} balance={balance} lnbitsBalance={lnbitsBalance} />
       )}
       {page === 'receive' && (
         <ReceiveScreen keypair={keypair} onNavigate={setPage} />

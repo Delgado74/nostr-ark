@@ -26,4 +26,6 @@ export const KEYS = {
   CURRENCY: 'nostrark_currency',
   TXS: 'nostrark_transactions',
   BALANCE: 'nostrark_balance',
+  LNBITS_URL: 'nostrark_lnbits_url',
+  LNBITS_KEY: 'nostrark_lnbits_key',
 };

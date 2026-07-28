@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { type NostrKeyPair, getPubkeyHex } from '../lib/nostr';
-import { getArkAddress, createLightningInvoice, getOnchainAddress } from '../lib/ark';
+import { getArkAddress, getOnchainAddress } from '../lib/ark';
+import * as lnbits from '../lib/lnbits';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc, getNetwork } from '../lib/i18n';
 import { Clipboard } from '@capacitor/clipboard';
@@ -20,10 +21,19 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
   const [address, setAddress] = useState('');
   const [fiatValue, setFiatValue] = useState('...');
   const [networkType, setNetworkType] = useState<NetworkType>('ark');
+  const [lnbitsConnected, setLnbitsConnected] = useState(false);
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState(false);
+  const [paymentReceived, setPaymentReceived] = useState(false);
   const qrRef = useRef<HTMLCanvasElement>(null);
+  const pollingRef = useRef<number | null>(null);
 
   const pubkeyHex = getPubkeyHex(keypair);
   const network = getNetwork();
+
+  useEffect(() => {
+    lnbits.isConnected().then(setLnbitsConnected);
+  }, []);
 
   useEffect(() => {
     const loadAddress = async () => {
@@ -34,10 +44,19 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
             addr = await getArkAddress();
             break;
           case 'lightning':
-            addr = await createLightningInvoice(
-              amount ? Number(amount) : 0,
-              memo,
-            );
+            if (lnbitsConnected && amount && Number(amount) > 0) {
+              setCreatingInvoice(true);
+              try {
+                const result = await lnbits.createInvoice(Number(amount), memo);
+                addr = result.bolt11;
+                setPendingPayment(true);
+                setPaymentReceived(false);
+              } finally {
+                setCreatingInvoice(false);
+              }
+            } else {
+              addr = '';
+            }
             break;
           case 'onchain':
             addr = await getOnchainAddress();
@@ -49,7 +68,34 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
       }
     };
     loadAddress();
-  }, [networkType, pubkeyHex, amount, memo, network]);
+  }, [networkType, pubkeyHex, amount, memo, network, lnbitsConnected]);
+
+  useEffect(() => {
+    if (pendingPayment && address && networkType === 'lightning') {
+      pollingRef.current = window.setInterval(async () => {
+        try {
+          const config = await lnbits.getConfig();
+          if (!config) return;
+          const res = await fetch(`${config.url}/api/v1/payments/${address}`, {
+            headers: { 'X-Api-Key': config.key },
+          });
+          if (res.ok) {
+            const data = await res.json() as { paid?: boolean; status?: string };
+            if (data.paid || data.status === 'success') {
+              setPaymentReceived(true);
+              setPendingPayment(false);
+              if (pollingRef.current) clearInterval(pollingRef.current);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }, 3000);
+      return () => {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+      };
+    }
+  }, [pendingPayment, address, networkType]);
 
   useEffect(() => {
     if (amount && Number(amount) > 0) {
@@ -94,6 +140,10 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
     onchain: '₿',
   };
 
+  const availableNetworks: NetworkType[] = lnbitsConnected
+    ? ['lightning', 'ark', 'onchain']
+    : ['ark', 'onchain'];
+
   return (
     <div>
       <div className="header">
@@ -105,7 +155,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
       </div>
 
       <div className="network-tabs">
-        {(['lightning', 'ark', 'onchain'] as NetworkType[]).map((type) => (
+        {availableNetworks.map((type) => (
           <button
             key={type}
             className={`network-tab ${networkType === type ? 'active' : ''}`}
@@ -149,35 +199,76 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
             lineHeight: 1.4,
           }}
         >
-          {address}
+          {creatingInvoice ? 'Creando invoice...' : address}
         </div>
-      </div>
 
-      <div className="input-group">
-        <label>{tFunc('receive.amountLabel')}</label>
-        <input
-          className="input"
-          type="number"
-          placeholder={tFunc('receive.amountPlaceholder')}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-        {fiatValue !== '...' && (
-          <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-            ≈ {fiatValue}
+        {paymentReceived && (
+          <div style={{
+            textAlign: 'center',
+            padding: 12,
+            background: 'rgba(46, 204, 113, 0.1)',
+            borderRadius: 8,
+            marginTop: 8,
+            fontSize: 14,
+            fontWeight: 600,
+            color: 'var(--green)',
+          }}>
+            ✓ ¡Pago recibido!
+          </div>
+        )}
+
+        {pendingPayment && !paymentReceived && (
+          <div style={{
+            textAlign: 'center',
+            padding: 12,
+            background: 'rgba(241, 196, 15, 0.1)',
+            borderRadius: 8,
+            marginTop: 8,
+            fontSize: 13,
+            color: '#f1c40f',
+          }}>
+            ⏳ Esperando pago...
           </div>
         )}
       </div>
 
-      <div className="input-group">
-        <label>{tFunc('receive.memoLabel')}</label>
-        <input
-          className="input"
-          placeholder={tFunc('receive.memoPlaceholder')}
-          value={memo}
-          onChange={(e) => setMemo(e.target.value)}
-        />
-      </div>
+      {networkType === 'lightning' && (
+        <div className="input-group">
+          <label>{tFunc('receive.amountLabel')}</label>
+          <input
+            className="input"
+            type="number"
+            placeholder={tFunc('receive.amountPlaceholder')}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          {fiatValue !== '...' && (
+            <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
+              ≈ {fiatValue}
+            </div>
+          )}
+        </div>
+      )}
+
+      {networkType === 'lightning' && (
+        <div className="input-group">
+          <label>{tFunc('receive.memoLabel')}</label>
+          <input
+            className="input"
+            placeholder={tFunc('receive.memoPlaceholder')}
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+          />
+        </div>
+      )}
+
+      {networkType === 'lightning' && !lnbitsConnected && (
+        <div className="card card-sm" style={{ marginBottom: 12, borderColor: 'var(--yellow)' }}>
+          <div style={{ fontSize: 13, color: 'var(--text2)' }}>
+            ⚡ Conecta tu LNbits en Ajustes para recibir Lightning
+          </div>
+        </div>
+      )}
 
       <button className="btn btn-primary" onClick={handleCopy}>
         {copied
