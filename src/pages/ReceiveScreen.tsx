@@ -12,9 +12,10 @@ type NetworkType = 'lightning' | 'ark' | 'onchain';
 interface Props {
   keypair: NostrKeyPair;
   onNavigate: (page: string) => void;
+  onPaymentReceived?: () => void;
 }
 
-export function ReceiveScreen({ keypair, onNavigate }: Props) {
+export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props) {
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [copied, setCopied] = useState(false);
@@ -25,6 +26,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
   const [creatingInvoice, setCreatingInvoice] = useState(false);
   const [pendingPayment, setPendingPayment] = useState(false);
   const [paymentReceived, setPaymentReceived] = useState(false);
+  const [paymentHash, setPaymentHash] = useState('');
   const qrRef = useRef<HTMLCanvasElement>(null);
   const pollingRef = useRef<number | null>(null);
 
@@ -49,6 +51,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
               try {
                 const result = await lnbits.createInvoice(Number(amount), memo);
                 addr = result.bolt11;
+                setPaymentHash(result.payment_hash);
                 setPendingPayment(true);
                 setPaymentReceived(false);
               } finally {
@@ -71,12 +74,12 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
   }, [networkType, pubkeyHex, amount, memo, network, lnbitsConnected]);
 
   useEffect(() => {
-    if (pendingPayment && address && networkType === 'lightning') {
+    if (pendingPayment && paymentHash && networkType === 'lightning') {
       pollingRef.current = window.setInterval(async () => {
         try {
           const config = await lnbits.getConfig();
           if (!config) return;
-          const res = await fetch(`${config.url}/api/v1/payments/${address}`, {
+          const res = await fetch(`${config.url}/api/v1/payments/${paymentHash}`, {
             headers: { 'X-Api-Key': config.key },
           });
           if (res.ok) {
@@ -85,6 +88,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
               setPaymentReceived(true);
               setPendingPayment(false);
               if (pollingRef.current) clearInterval(pollingRef.current);
+              onPaymentReceived?.();
             }
           }
         } catch {
@@ -95,7 +99,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
         if (pollingRef.current) clearInterval(pollingRef.current);
       };
     }
-  }, [pendingPayment, address, networkType]);
+  }, [pendingPayment, paymentHash, networkType]);
 
   useEffect(() => {
     if (amount && Number(amount) > 0) {

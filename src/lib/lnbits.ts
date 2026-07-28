@@ -118,7 +118,7 @@ export async function getWalletDetails(): Promise<{ name: string; balance: numbe
 export async function getBalance(): Promise<number> {
   try {
     const wallet = await getWalletDetails();
-    return wallet.balance;
+    return Math.round(wallet.balance / 1000);
   } catch {
     return 0;
   }
@@ -163,10 +163,13 @@ export async function checkPayment(paymentHash: string): Promise<boolean> {
 
 export async function getPayments(): Promise<LnbitsPayment[]> {
   try {
-    const data = await apiRequest('GET', '/api/v1/payments?limit=50') as {
-      details?: { list?: LnbitsPayment[] };
-    };
-    return data.details?.list || [];
+    const data = await apiRequest('GET', '/api/v1/payments?limit=50');
+    if (Array.isArray(data)) return data as LnbitsPayment[];
+    if (data && typeof data === 'object' && 'details' in (data as Record<string, unknown>)) {
+      const d = data as { details?: { list?: LnbitsPayment[] } };
+      return d.details?.list || [];
+    }
+    return [];
   } catch {
     return [];
   }
@@ -177,7 +180,7 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
   return payments.map((p) => ({
     id: p.payment_hash,
     type: p.amount > 0 ? 'incoming' as const : 'outgoing' as const,
-    amount: Math.abs(p.amount),
+    amount: Math.abs(Math.round(p.amount / 1000)),
     timestamp: (p.created_at || Date.now() / 1000) * 1000,
     memo: p.memo || undefined,
     network: 'lightning' as const,

@@ -407,6 +407,20 @@ textarea.input {
   overflow-y: auto;
 }
 
+.qr-scanner-container {
+  background: var(--surface);
+  border-radius: 16px 16px 0 0;
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+}
+
+.qr-scanner-container video {
+  border-radius: 12px;
+  max-width: 100%;
+}
+
 .modal-handle {
   width: 40px;
   height: 4px;

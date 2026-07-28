@@ -196,7 +196,7 @@ export const App: React.FC = () => {
         <SendScreen keypair={keypair} onNavigate={setPage} onTx={handleTx} balance={balance} lnbitsBalance={lnbitsBalance} />
       )}
       {page === 'receive' && (
-        <ReceiveScreen keypair={keypair} onNavigate={setPage} />
+        <ReceiveScreen keypair={keypair} onNavigate={setPage} onPaymentReceived={refreshData} />
       )}
       {page === 'history' && (
         <HistoryScreen transactions={transactions} onNavigate={setPage} />

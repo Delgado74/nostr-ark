@@ -5,7 +5,7 @@ import { setLang, getLang, tFunc, type Lang, setNetwork, getNetwork, type Networ
 import { setCurrency, getCurrency, type Currency } from '../lib/yadio';
 import { Clipboard } from '@capacitor/clipboard';
 import * as lnbits from '../lib/lnbits';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { QrScanner } from '../components/QrScanner';
 
 interface Props {
   keypair: NostrKeyPair;
@@ -25,6 +25,7 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
   const [lnbitsKey, setLnbitsKey] = useState('');
   const [lnbitsError, setLnbitsError] = useState('');
   const [lnbitsLoading, setLnbitsLoading] = useState(false);
+  const [showQrScanner, setShowQrScanner] = useState(false);
 
   useEffect(() => {
     const checkLnbits = async () => {
@@ -42,29 +43,22 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
     checkLnbits();
   }, []);
 
-  const handleScanLnbitsQr = async () => {
+  const handleQrScanResult = async (data: string) => {
+    setShowQrScanner(false);
+    setLnbitsLoading(true);
+    setLnbitsError('');
     try {
-      const photo = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: CameraSource.Camera,
-      });
-      if (photo.base64String) {
-        setLnbitsLoading(true);
-        setLnbitsError('');
-        const success = await lnbits.connect(atob(photo.base64String));
-        if (success) {
-          setLnbitsConnected(true);
-          setShowLnbitsModal(false);
-          const wallet = await lnbits.getWalletDetails();
-          setLnbitsName(wallet.name);
-        } else {
-          setLnbitsError(tFunc('settings.lnbitsError'));
-        }
+      const success = await lnbits.connect(data);
+      if (success) {
+        setLnbitsConnected(true);
+        setShowLnbitsModal(false);
+        const wallet = await lnbits.getWalletDetails();
+        setLnbitsName(wallet.name);
+      } else {
+        setLnbitsError(tFunc('settings.lnbitsError'));
       }
     } catch {
-      // camera cancelled
+      setLnbitsError(tFunc('settings.lnbitsError'));
     } finally {
       setLnbitsLoading(false);
     }
@@ -297,12 +291,19 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
 
             <button
               className="btn btn-primary"
-              onClick={handleScanLnbitsQr}
+              onClick={() => setShowQrScanner(true)}
               disabled={lnbitsLoading}
               style={{ marginBottom: 8 }}
             >
               {lnbitsLoading ? '...' : `📷 ${tFunc('settings.scanQr')}`}
             </button>
+
+            {showQrScanner && (
+              <QrScanner
+                onScan={handleQrScanResult}
+                onClose={() => setShowQrScanner(false)}
+              />
+            )}
 
             <div
               style={{

@@ -4,8 +4,8 @@ import { sendToAddress, parseInvoiceAmount, estimateFee, type ArkTransaction, ty
 import * as lnbits from '../lib/lnbits';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
+import { QrScanner } from '../components/QrScanner';
 import { Clipboard } from '@capacitor/clipboard';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface Props {
   keypair: NostrKeyPair;
@@ -22,6 +22,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   const [fiatEstimate, setFiatEstimate] = useState('...');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
 
   const inputType = identifyInputType(input);
 
@@ -53,20 +54,14 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
     }
   };
 
-  const handleScan = async () => {
-    try {
-      const photo = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: CameraSource.Camera,
-      });
-      if (photo.base64String) {
-        setError(tFunc('send.scanning'));
-      }
-    } catch {
-      // User cancelled or camera unavailable
-    }
+  const handleScan = () => {
+    setShowScanner(true);
+  };
+
+  const handleQrResult = (data: string) => {
+    setInput(data);
+    setShowScanner(false);
+    setError('');
   };
 
   const handleSend = async () => {
@@ -246,6 +241,13 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
       >
         {sending ? '...' : `↗ ${tFunc('send.confirm')}`}
       </button>
+
+      {showScanner && (
+        <QrScanner
+          onScan={handleQrResult}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   );
 }
