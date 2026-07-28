@@ -45,12 +45,15 @@ export async function isConnected(): Promise<boolean> {
 }
 
 export async function connect(qrData: string): Promise<boolean> {
+  const key = qrData.replace(/^lightning:/, '').trim();
+
   try {
-    const parsed = JSON.parse(qrData);
-    if (parsed.url && parsed.key) {
+    const parsed = JSON.parse(key);
+    const apiKey = parsed.admin || parsed.invoice || parsed.key;
+    if (parsed.url && apiKey) {
       await storage.set(KEYS.LNBITS_URL, parsed.url);
-      await storage.set(KEYS.LNBITS_KEY, parsed.key);
-      configCache = { url: parsed.url.replace(/\/$/, ''), key: parsed.key };
+      await storage.set(KEYS.LNBITS_KEY, apiKey);
+      configCache = { url: parsed.url.replace(/\/$/, ''), key: apiKey };
       return true;
     }
   } catch {

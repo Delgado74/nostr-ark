@@ -207,7 +207,7 @@ export async function finalizePendingTxs(): Promise<{ finalized: string[]; pendi
 }
 
 export function parseInvoiceAmount(invoice: string): number {
-  const lower = invoice.toLowerCase();
+  const lower = invoice.replace(/^lightning:/i, '').toLowerCase();
   let prefix = '';
   if (lower.startsWith('lnbc')) prefix = 'lnbc';
   else if (lower.startsWith('lntbs')) prefix = 'lntbs';

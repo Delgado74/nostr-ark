@@ -48,7 +48,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   const handlePaste = async () => {
     try {
       const { value } = await Clipboard.read();
-      if (value) setInput(value);
+      if (value) setInput(value.replace(/^lightning:/i, ''));
     } catch {
       // clipboard unavailable
     }
@@ -59,7 +59,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   };
 
   const handleQrResult = (data: string) => {
-    setInput(data);
+    setInput(data.replace(/^lightning:/i, ''));
     setShowScanner(false);
     setError('');
   };
@@ -139,7 +139,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
           placeholder={tFunc('send.invoicePlaceholder')}
           value={input}
           onChange={(e) => {
-            setInput(e.target.value);
+            setInput(e.target.value.replace(/^lightning:/i, ''));
             setError('');
           }}
           style={{ marginBottom: 8 }}
