@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import jsQR from 'jsqr';
+import { useEffect, useState } from 'react';
+import {
+  BarcodeScanner,
+  BarcodeFormat,
+} from '@capacitor-mlkit/barcode-scanning';
 
 interface Props {
   onScan: (data: string) => void;
@@ -8,7 +10,6 @@ interface Props {
 }
 
 export function QrScanner({ onScan, onClose }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
   const [attempt, setAttempt] = useState(0);
@@ -20,67 +21,41 @@ export function QrScanner({ onScan, onClose }: Props) {
       setBusy(true);
       setError('');
       try {
-        const photo = await Camera.getPhoto({
-          quality: 90,
-          allowEditing: false,
-          resultType: CameraResultType.Base64,
-          source: CameraSource.Camera,
-        });
-
-        if (cancelled) return;
-
-        if (!photo.base64String) {
-          setError('No se pudo capturar la imagen');
+        const { supported } = await BarcodeScanner.isSupported();
+        if (!supported) {
+          setError('Escáner no soportado en este dispositivo');
           setBusy(false);
           return;
         }
 
-        const img = new Image();
-        const dataUrl = `data:image/jpeg;base64,${photo.base64String}`;
+        const { available } =
+          await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+        if (!available) {
+          await BarcodeScanner.installGoogleBarcodeScannerModule();
+        }
 
-        img.onload = () => {
-          if (cancelled) return;
-          const canvas = canvasRef.current;
-          if (!canvas) {
-            setError('Error interno');
-            setBusy(false);
-            return;
-          }
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            setError('Error interno');
-            setBusy(false);
-            return;
-          }
-          ctx.drawImage(img, 0, 0);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
+        const { barcodes } = await BarcodeScanner.scan({
+          formats: [BarcodeFormat.QrCode],
+        });
 
-          if (code) {
-            onScan(code.data);
-          } else {
-            setError('No se encontró QR. Asegúrate de que el código esté bien visible.');
-            setBusy(false);
-          }
-        };
+        if (cancelled) return;
 
-        img.onerror = () => {
-          if (!cancelled) {
-            setError('Error al procesar la imagen');
-            setBusy(false);
-          }
-        };
-
-        img.src = dataUrl;
+        if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+          onScan(barcodes[0].rawValue);
+        } else {
+          onClose();
+        }
       } catch (err) {
         if (cancelled) return;
         const msg = (err as Error)?.message || '';
-        if (msg.includes('cancel') || msg.includes('User')) {
+        if (
+          msg.includes('cancel') ||
+          msg.includes('User') ||
+          msg.includes('user')
+        ) {
           onClose();
         } else {
-          setError('Error al abrir cámara: ' + msg);
+          setError('Error: ' + msg);
           setBusy(false);
         }
       }
@@ -91,10 +66,6 @@ export function QrScanner({ onScan, onClose }: Props) {
     return () => { cancelled = true; };
   }, [attempt, onScan, onClose]);
 
-  const handleRetry = () => {
-    setAttempt((a) => a + 1);
-  };
-
   return (
     <div
       style={{
@@ -103,7 +74,7 @@ export function QrScanner({ onScan, onClose }: Props) {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.9)',
+        background: '#000',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -111,13 +82,11 @@ export function QrScanner({ onScan, onClose }: Props) {
         zIndex: 9999,
       }}
     >
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-
       {busy && (
         <>
           <div className="spinner" style={{ width: 40, height: 40, borderWidth: 3 }} />
           <p style={{ color: '#fff', marginTop: 16, fontSize: 14 }}>
-            Escaneando QR...
+            {error || 'Escaneando QR...'}
           </p>
         </>
       )}
@@ -130,7 +99,7 @@ export function QrScanner({ onScan, onClose }: Props) {
           <button
             className="btn btn-primary"
             style={{ marginTop: 16 }}
-            onClick={handleRetry}
+            onClick={() => setAttempt((a) => a + 1)}
           >
             Reintentar
           </button>

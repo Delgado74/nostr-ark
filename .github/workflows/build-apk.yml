@@ -37,6 +37,17 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Configure Android for barcode scanning
+        run: |
+          # Add camera permissions
+          sed -i 's|</manifest>|    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.FLASHLIGHT"/>\n</manifest>|' android/app/src/main/AndroidManifest.xml
+
+          # Add ML Kit metadata inside <application> tag
+          sed -i 's|android:theme="@style/AppTheme">|android:theme="@style/AppTheme">\n        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui"/>|' android/app/src/main/AndroidManifest.xml
+
+          # Enable data binding in build.gradle
+          sed -i '/android {/a\    buildFeatures {\n        dataBinding true\n    }\n    dataBinding {\n        enabled = true\n    }' android/app/build.gradle
+
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
