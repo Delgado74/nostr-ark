@@ -5,6 +5,8 @@ import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
 import { Clipboard } from '@capacitor/clipboard';
 
+type NetworkType = 'lightning' | 'ark' | 'onchain';
+
 interface Props {
   keypair: NostrKeyPair;
   onNavigate: (page: string) => void;
@@ -16,6 +18,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
   const [copied, setCopied] = useState(false);
   const [arkAddress, setArkAddress] = useState('');
   const [fiatValue, setFiatValue] = useState('...');
+  const [networkType, setNetworkType] = useState<NetworkType>('ark');
 
   const pubkeyHex = getPubkeyHex(keypair);
 
@@ -41,6 +44,18 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
     }
   };
 
+  const networkLabel = {
+    lightning: tFunc('receive.lightning'),
+    ark: tFunc('receive.ark'),
+    onchain: tFunc('receive.onchain'),
+  };
+
+  const networkIcon = {
+    lightning: '⚡',
+    ark: '🔗',
+    onchain: '₿',
+  };
+
   return (
     <div>
       <div className="header">
@@ -51,7 +66,19 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
         <div style={{ width: 28 }}></div>
       </div>
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="network-tabs">
+        {(['lightning', 'ark', 'onchain'] as NetworkType[]).map((type) => (
+          <button
+            key={type}
+            className={`network-tab ${networkType === type ? 'active' : ''}`}
+            onClick={() => setNetworkType(type)}
+          >
+            {networkIcon[type]} {networkLabel[type]}
+          </button>
+        ))}
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
         <div
           style={{
             textAlign: 'center',
@@ -60,7 +87,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
             color: 'var(--text2)',
           }}
         >
-          {tFunc('receive.ark')}
+          {networkLabel[networkType]}
         </div>
         <div
           style={{
@@ -73,7 +100,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
           }}
         >
           <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: 64 }}>⚡</span>
+            <span style={{ fontSize: 64 }}>{networkIcon[networkType]}</span>
             <div
               style={{
                 fontSize: 10,
@@ -119,7 +146,7 @@ export function ReceiveScreen({ keypair, onNavigate }: Props) {
       <button className="btn btn-primary" onClick={handleCopy}>
         {copied
           ? `✓ ${tFunc('receive.copied')}`
-          : `📋 ${tFunc('receive.copyAddress')}`}
+          : `📎 ${tFunc('receive.copyAddress')}`}
       </button>
     </div>
   );

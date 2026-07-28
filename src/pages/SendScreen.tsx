@@ -4,6 +4,7 @@ import { sendToAddress, type ArkTransaction } from '../lib/ark';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
 import { Clipboard } from '@capacitor/clipboard';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface Props {
   keypair: NostrKeyPair;
@@ -37,6 +38,26 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
       if (value) setInput(value);
     } catch {
       // clipboard unavailable
+    }
+  };
+
+  const handleScan = async () => {
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+      });
+
+      if (photo.base64String) {
+        // In a real app, you'd use a QR code library to decode this.
+        // For now, we'll just try to decode the base64 image with a QR scanner
+        // This is a placeholder - in production, use a proper QR scanning library
+        setError(tFunc('send.scanning'));
+      }
+    } catch {
+      // User cancelled or camera unavailable
     }
   };
 
@@ -97,22 +118,30 @@ export function SendScreen({ keypair, onNavigate, onTx }: Props) {
 
       <div className="input-group">
         <label>{tFunc('send.invoiceLabel')}</label>
+        <input
+          className="input"
+          placeholder={tFunc('send.invoicePlaceholder')}
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            setError('');
+          }}
+          style={{ marginBottom: 8 }}
+        />
         <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            className="input"
-            placeholder={tFunc('send.invoicePlaceholder')}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setError('');
-            }}
-          />
           <button
             className="btn btn-secondary btn-sm"
             onClick={handlePaste}
-            style={{ flexShrink: 0 }}
+            style={{ flex: 1 }}
           >
-            📋
+            📋 {tFunc('send.pasteButton')}
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleScan}
+            style={{ flex: 1 }}
+          >
+            📷 {tFunc('send.scanButton')}
           </button>
         </div>
         {input && inputType !== 'unknown' && (

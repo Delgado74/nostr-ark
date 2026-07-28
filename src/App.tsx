@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { type NostrKeyPair } from './lib/nostr';
 import { type ArkBalance, type ArkTransaction, getBalance } from './lib/ark';
 import { storage, KEYS } from './lib/storage';
-import { tFunc } from './lib/i18n';
+import { tFunc, getNetwork } from './lib/i18n';
 import { AuthScreen } from './pages/AuthScreen';
 import { Dashboard } from './pages/Dashboard';
 import { SendScreen } from './pages/SendScreen';
@@ -15,6 +15,7 @@ export const App: React.FC = () => {
   const [page, setPage] = useState('auth');
   const [balance, setBalance] = useState<ArkBalance>({ confirmed: 0, pending: 0 });
   const [transactions, setTransactions] = useState<ArkTransaction[]>([]);
+  const [network, setNetworkState] = useState(getNetwork());
 
   useEffect(() => {
     const load = async () => {
@@ -54,6 +55,11 @@ export const App: React.FC = () => {
     setPage('auth');
   }, []);
 
+  const handleNetworkChange = useCallback(() => {
+    setNetworkState(getNetwork());
+    refreshBalance();
+  }, [refreshBalance]);
+
   if (page === 'auth' || !keypair) {
     return <AuthScreen onAuthenticated={(kp) => { setKeypair(kp); setPage('dash'); }} />;
   }
@@ -73,7 +79,7 @@ export const App: React.FC = () => {
         <HistoryScreen transactions={transactions} onNavigate={setPage} />
       )}
       {page === 'settings' && (
-        <SettingsScreen keypair={keypair} onNavigate={setPage} onLogout={handleLogout} />
+        <SettingsScreen keypair={keypair} onNavigate={setPage} onLogout={handleLogout} onNetworkChange={handleNetworkChange} />
       )}
 
       {page !== 'auth' && (
@@ -88,7 +94,7 @@ export const App: React.FC = () => {
             <span className="nav-icon">↙</span>
           </button>
           <button className={`nav-item ${page === 'history' ? 'active' : ''}`} onClick={() => setPage('history')}>
-            <span className="nav-icon">📋</span>
+            <span className="nav-icon">⏱</span>
           </button>
           <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => setPage('settings')}>
             <span className="nav-icon">⚙</span>

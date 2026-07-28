@@ -188,6 +188,27 @@ body {
   margin: 16px 0;
 }
 
+.quick-actions .btn {
+  padding: 20px 16px;
+  font-size: 16px;
+  border-radius: 16px;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.quick-actions .btn:active {
+  transform: scale(0.97);
+}
+
+.quick-actions .btn-icon {
+  font-size: 28px;
+}
+
+.quick-actions .btn-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+}
+
 /* Input */
 .input-group {
   margin-bottom: 16px;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { type NostrKeyPair } from '../lib/nostr';
 import { storage } from '../lib/storage';
-import { setLang, getLang, tFunc, type Lang } from '../lib/i18n';
+import { setLang, getLang, tFunc, type Lang, setNetwork, getNetwork, type Network } from '../lib/i18n';
 import { setCurrency, getCurrency, type Currency } from '../lib/yadio';
 import { Clipboard } from '@capacitor/clipboard';
 
@@ -9,9 +9,10 @@ interface Props {
   keypair: NostrKeyPair;
   onNavigate: (page: string) => void;
   onLogout: () => void;
+  onNetworkChange: () => void;
 }
 
-export function SettingsScreen({ keypair, onNavigate, onLogout }: Props) {
+export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange }: Props) {
   const [showBackup, setShowBackup] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -33,6 +34,11 @@ export function SettingsScreen({ keypair, onNavigate, onLogout }: Props) {
     }
     await storage.clear();
     onLogout();
+  };
+
+  const handleNetworkChange = (network: Network) => {
+    setNetwork(network);
+    onNetworkChange();
   };
 
   return (
@@ -70,6 +76,19 @@ export function SettingsScreen({ keypair, onNavigate, onLogout }: Props) {
             <option value="CUP">CUP</option>
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
+          </select>
+        </div>
+
+        <div className="setting-item">
+          <span className="setting-label">⛓ {tFunc('settings.network')}</span>
+          <select
+            className="input"
+            style={{ width: 'auto', padding: '8px 12px', fontSize: 14 }}
+            value={getNetwork()}
+            onChange={(e) => handleNetworkChange(e.target.value as Network)}
+          >
+            <option value="mainnet">{tFunc('settings.mainnet')}</option>
+            <option value="testnet">{tFunc('settings.testnet')}</option>
           </select>
         </div>
 

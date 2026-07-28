@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { type NostrKeyPair, shortPubkey } from '../lib/nostr';
-import { type ArkBalance, getBalance } from '../lib/ark';
+import { type ArkBalance } from '../lib/ark';
 import { satsToFiat, getCurrency } from '../lib/yadio';
-import { tFunc } from '../lib/i18n';
+import { tFunc, getNetwork } from '../lib/i18n';
 
 interface Props {
   keypair: NostrKeyPair;
@@ -19,6 +19,7 @@ function pubkeyToHex(keypair: NostrKeyPair): string {
 export function Dashboard({ keypair, onNavigate, balance }: Props) {
   const [fiatValue, setFiatValue] = useState('...');
   const pubkeyHex = pubkeyToHex(keypair);
+  const network = getNetwork();
 
   useEffect(() => {
     satsToFiat(balance.confirmed, getCurrency()).then(setFiatValue);
@@ -33,9 +34,9 @@ export function Dashboard({ keypair, onNavigate, balance }: Props) {
         </button>
       </div>
 
-      <div className="network-badge mainnet">
+      <div className={`network-badge ${network}`}>
         <span className="dot"></span>
-        {tFunc('dash.mainnet')}
+        {network === 'mainnet' ? tFunc('dash.mainnet') : tFunc('dash.testnet')}
       </div>
 
       <div className="balance-section">
@@ -53,10 +54,12 @@ export function Dashboard({ keypair, onNavigate, balance }: Props) {
 
       <div className="quick-actions">
         <button className="btn btn-primary" onClick={() => onNavigate('send')}>
-          ↗ {tFunc('dash.send')}
+          <span className="btn-icon">↗</span>
+          {tFunc('dash.send')}
         </button>
         <button className="btn btn-secondary" onClick={() => onNavigate('receive')}>
-          ↙ {tFunc('dash.receive')}
+          <span className="btn-icon">↙</span>
+          {tFunc('dash.receive')}
         </button>
       </div>
 
@@ -73,7 +76,7 @@ export function Dashboard({ keypair, onNavigate, balance }: Props) {
           }}
         >
           <span style={{ fontSize: 14, fontWeight: 500 }}>
-            📋 {tFunc('dash.history')}
+            ⏱ {tFunc('dash.history')}
           </span>
           <span style={{ color: 'var(--text2)' }}>→</span>
         </div>

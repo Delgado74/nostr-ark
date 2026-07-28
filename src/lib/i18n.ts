@@ -15,6 +15,7 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.balance': 'Saldo',
     'dash.network': 'Red',
     'dash.mainnet': 'Mainnet',
+    'dash.testnet': 'Testnet',
     'dash.send': 'Enviar',
     'dash.receive': 'Recibir',
     'dash.history': 'Historial',
@@ -52,6 +53,7 @@ const t: Record<Lang, Record<string, string>> = {
     'receive.ark': 'Dirección Ark',
     'receive.onchain': 'Dirección On-chain',
     'receive.fiat': 'Valor fiat',
+    'receive.networkType': 'Tipo de red',
 
     // History
     'history.title': 'Historial',
@@ -63,6 +65,9 @@ const t: Record<Lang, Record<string, string>> = {
     'settings.title': 'Ajustes',
     'settings.language': 'Idioma',
     'settings.currency': 'Moneda',
+    'settings.network': 'Red',
+    'settings.mainnet': 'Mainnet',
+    'settings.testnet': 'Testnet',
     'settings.backup': 'Copia de Seguridad',
     'settings.backupTitle': 'Tu clave nsec',
     'settings.backupWarning': 'Guarda esta clave en un lugar seguro. Es tu acceso a la billetera.',
@@ -87,6 +92,7 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.balance': 'Balance',
     'dash.network': 'Network',
     'dash.mainnet': 'Mainnet',
+    'dash.testnet': 'Testnet',
     'dash.send': 'Send',
     'dash.receive': 'Receive',
     'dash.history': 'History',
@@ -124,6 +130,7 @@ const t: Record<Lang, Record<string, string>> = {
     'receive.ark': 'Ark Address',
     'receive.onchain': 'On-chain Address',
     'receive.fiat': 'Fiat value',
+    'receive.networkType': 'Network type',
 
     // History
     'history.title': 'History',
@@ -135,6 +142,9 @@ const t: Record<Lang, Record<string, string>> = {
     'settings.title': 'Settings',
     'settings.language': 'Language',
     'settings.currency': 'Currency',
+    'settings.network': 'Network',
+    'settings.mainnet': 'Mainnet',
+    'settings.testnet': 'Testnet',
     'settings.backup': 'Backup',
     'settings.backupTitle': 'Your nsec key',
     'settings.backupWarning': 'Save this key in a safe place. It is your wallet access.',
@@ -159,3 +169,14 @@ export const getLang = () => currentLang;
 export const tFunc = (key: string): string => {
   return t[currentLang]?.[key] || t['es']?.[key] || key;
 };
+
+export type Network = 'mainnet' | 'testnet';
+
+let currentNetwork: Network = (localStorage.getItem('network') as Network) || 'mainnet';
+
+export const setNetwork = (network: Network) => {
+  currentNetwork = network;
+  localStorage.setItem('network', network);
+};
+
+export const getNetwork = () => currentNetwork;
