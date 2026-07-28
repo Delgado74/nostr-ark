@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { useEffect, useRef, useState } from 'react';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import jsQR from 'jsqr';
 
 interface Props {
   onScan: (data: string) => void;
@@ -7,41 +8,92 @@ interface Props {
 }
 
 export function QrScanner({ onScan, onClose }: Props) {
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const videoRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(true);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let scanner: Html5Qrcode | null = null;
+    let cancelled = false;
 
-    const start = async () => {
+    const scan = async () => {
+      setBusy(true);
+      setError('');
       try {
-        scanner = new Html5Qrcode('qr-reader');
-        scannerRef.current = scanner;
+        const photo = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.Base64,
+          source: CameraSource.Camera,
+        });
 
-        await scanner.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          (decodedText) => {
-            scanner?.stop().catch(() => {});
-            onScan(decodedText);
-          },
-          () => {},
-        );
+        if (cancelled) return;
+
+        if (!photo.base64String) {
+          setError('No se pudo capturar la imagen');
+          setBusy(false);
+          return;
+        }
+
+        const img = new Image();
+        const dataUrl = `data:image/jpeg;base64,${photo.base64String}`;
+
+        img.onload = () => {
+          if (cancelled) return;
+          const canvas = canvasRef.current;
+          if (!canvas) {
+            setError('Error interno');
+            setBusy(false);
+            return;
+          }
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            setError('Error interno');
+            setBusy(false);
+            return;
+          }
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+          if (code) {
+            onScan(code.data);
+          } else {
+            setError('No se encontró QR. Asegúrate de que el código esté bien visible.');
+            setBusy(false);
+          }
+        };
+
+        img.onerror = () => {
+          if (!cancelled) {
+            setError('Error al procesar la imagen');
+            setBusy(false);
+          }
+        };
+
+        img.src = dataUrl;
       } catch (err) {
-        console.error('QR scanner error:', err);
-        onClose();
+        if (cancelled) return;
+        const msg = (err as Error)?.message || '';
+        if (msg.includes('cancel') || msg.includes('User')) {
+          onClose();
+        } else {
+          setError('Error al abrir cámara: ' + msg);
+          setBusy(false);
+        }
       }
     };
 
-    const timer = setTimeout(start, 200);
+    scan();
 
-    return () => {
-      clearTimeout(timer);
-      if (scanner) {
-        scanner.stop().catch(() => {});
-      }
-    };
-  }, [onScan, onClose]);
+    return () => { cancelled = true; };
+  }, [attempt, onScan, onClose]);
+
+  const handleRetry = () => {
+    setAttempt((a) => a + 1);
+  };
 
   return (
     <div
@@ -59,21 +111,31 @@ export function QrScanner({ onScan, onClose }: Props) {
         zIndex: 9999,
       }}
     >
-      <div
-        style={{
-          width: 280,
-          height: 280,
-          overflow: 'hidden',
-          borderRadius: 12,
-          background: '#000',
-        }}
-      >
-        <div id="qr-reader" ref={videoRef} />
-      </div>
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      <p style={{ color: '#fff', marginTop: 16, fontSize: 14 }}>
-        Apunta al código QR
-      </p>
+      {busy && (
+        <>
+          <div className="spinner" style={{ width: 40, height: 40, borderWidth: 3 }} />
+          <p style={{ color: '#fff', marginTop: 16, fontSize: 14 }}>
+            Escaneando QR...
+          </p>
+        </>
+      )}
+
+      {!busy && error && (
+        <>
+          <p style={{ color: '#e74c3c', fontSize: 14, textAlign: 'center', padding: '0 24px' }}>
+            {error}
+          </p>
+          <button
+            className="btn btn-primary"
+            style={{ marginTop: 16 }}
+            onClick={handleRetry}
+          >
+            Reintentar
+          </button>
+        </>
+      )}
 
       <button
         className="btn btn-secondary"
