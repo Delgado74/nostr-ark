@@ -55,7 +55,12 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
         const wallet = await lnbits.getWalletDetails();
         setLnbitsName(wallet.name);
       } else {
-        setLnbitsError(tFunc('settings.lnbitsError'));
+        const config = await lnbits.getConfig();
+        if (config && config.url) {
+          setLnbitsError(tFunc('settings.lnbitsError'));
+        } else {
+          setLnbitsError('Key guardada. Ingresa la URL manualmente y presiona Conectar');
+        }
       }
     } catch {
       setLnbitsError(tFunc('settings.lnbitsError'));

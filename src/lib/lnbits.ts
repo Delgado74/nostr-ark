@@ -45,10 +45,10 @@ export async function isConnected(): Promise<boolean> {
 }
 
 export async function connect(qrData: string): Promise<boolean> {
-  const key = qrData.replace(/^lightning:/, '').trim();
+  const raw = qrData.replace(/^lightning:/, '').trim();
 
   try {
-    const parsed = JSON.parse(key);
+    const parsed = JSON.parse(raw);
     const apiKey = parsed.admin || parsed.invoice || parsed.key;
     if (parsed.url && apiKey) {
       await storage.set(KEYS.LNBITS_URL, parsed.url);
@@ -57,16 +57,17 @@ export async function connect(qrData: string): Promise<boolean> {
       return true;
     }
   } catch {
-    // Try as plain key with manual URL
+    // Not JSON
   }
 
+  // Plain key — save it (URL must be set separately)
+  await storage.set(KEYS.LNBITS_KEY, raw);
   const config = await getConfig();
-  if (config && qrData.trim()) {
-    await storage.set(KEYS.LNBITS_KEY, qrData.trim());
-    configCache = { ...config, key: qrData.trim() };
+  if (config) {
+    configCache = { ...config, key: raw };
     return true;
   }
-
+  configCache = { url: '', key: raw };
   return false;
 }
 
