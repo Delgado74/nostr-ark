@@ -218,19 +218,20 @@ export function parseInvoiceAmount(invoice: string): number {
   if (!afterPrefix || afterPrefix[0] === '1') return 0;
 
   let amountStr = '';
-  let multiplier = 1;
+  let multiplier = 0;
   for (const ch of afterPrefix) {
     if (ch >= '0' && ch <= '9') {
       amountStr += ch;
-    } else if (ch === 'p') { multiplier = 1; break; }
-    else if (ch === 'n') { multiplier = 100000; break; }
-    else if (ch === 'u') { multiplier = 100000000; break; }
-    else if (ch === 'm') { multiplier = 100000000000; break; }
+    } else if (ch === 'p') { multiplier = 0.0001; break; }
+    else if (ch === 'n') { multiplier = 0.1; break; }
+    else if (ch === 'u') { multiplier = 100; break; }
+    else if (ch === 'm') { multiplier = 100000; break; }
     else break;
   }
 
   if (!amountStr) return 0;
-  return Math.round((Number(amountStr) * multiplier) / 1000);
+  if (multiplier === 0) multiplier = 0.0001;
+  return Math.round(Number(amountStr) * multiplier);
 }
 
 export function estimateFee(amountSats: number, networkType: 'lightning' | 'ark' | 'onchain'): number {
