@@ -214,7 +214,7 @@ export function parseInvoiceAmount(invoice: string): number {
   else if (lower.startsWith('lntb')) prefix = 'lntb';
   else return 0;
 
-  const afterPrefix = invoice.slice(prefix.length);
+  const afterPrefix = lower.slice(prefix.length);
   if (!afterPrefix || afterPrefix[0] === '1') return 0;
 
   let amountStr = '';
@@ -236,7 +236,7 @@ export function parseInvoiceAmount(invoice: string): number {
 
 export function estimateFee(amountSats: number, networkType: 'lightning' | 'ark' | 'onchain'): number {
   switch (networkType) {
-    case 'lightning': return Math.max(1, Math.round(amountSats * 0.001));
+    case 'lightning': return 0;
     case 'ark': return Math.max(100, Math.round(amountSats * 0.002));
     case 'onchain': return Math.max(1000, Math.round(amountSats * 0.01));
     default: return 0;
