@@ -185,7 +185,7 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
     id: p.payment_hash,
     type: p.amount > 0 ? 'incoming' as const : 'outgoing' as const,
     amount: Math.abs(Math.round(p.amount / 1000)),
-    timestamp: (p.created_at || Date.now() / 1000) * 1000,
+    timestamp: p.created_at ? p.created_at * 1000 : Date.now(),
     memo: p.memo || undefined,
     network: 'lightning' as const,
     fee: p.fee !== undefined ? Math.round(p.fee / 1000) : undefined,

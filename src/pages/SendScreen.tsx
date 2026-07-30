@@ -83,6 +83,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
           memo: memo || undefined,
           network: 'lightning',
           fiatAtTime: fiatEstimate !== '...' ? Number(fiatEstimate.replace(/[^0-9.]/g, '')) : undefined,
+          status: 'success',
         };
         onTx(tx);
         onNavigate('dash');

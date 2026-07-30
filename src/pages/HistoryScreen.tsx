@@ -9,6 +9,7 @@ interface Props {
 
 export function HistoryScreen({ transactions, onNavigate }: Props) {
   const formatDate = (ts: number) => {
+    if (!ts || isNaN(ts)) return '-';
     const d = new Date(ts);
     return d.toLocaleDateString('es-ES', {
       day: '2-digit',

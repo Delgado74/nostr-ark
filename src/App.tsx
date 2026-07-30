@@ -45,8 +45,12 @@ export const App: React.FC = () => {
 
       const seen = new Map<string, ArkTransaction>();
       for (const tx of [...txs, ...lnTx]) {
-        const existing = seen.get(tx.id);
-        if (!existing || tx.timestamp > existing.timestamp) {
+        let existing = seen.get(tx.id);
+        if (!existing) {
+          seen.set(tx.id, tx);
+        } else if (tx.network === 'lightning' && existing.status !== 'success' && tx.status === 'success') {
+          seen.set(tx.id, tx);
+        } else if (tx.timestamp > existing.timestamp) {
           seen.set(tx.id, tx);
         }
       }
@@ -90,7 +94,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (walletReady) {
       refreshData();
-      refreshTimerRef.current = window.setInterval(refreshData, 30000);
+      refreshTimerRef.current = window.setInterval(refreshData, 60000);
       return () => {
         if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
       };
