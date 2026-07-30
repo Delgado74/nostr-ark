@@ -234,15 +234,6 @@ export function parseInvoiceAmount(invoice: string): number {
   return Math.round(Number(amountStr) * multiplier);
 }
 
-export function estimateFee(amountSats: number, networkType: 'lightning' | 'ark' | 'onchain'): number {
-  switch (networkType) {
-    case 'lightning': return 0;
-    case 'ark': return Math.max(100, Math.round(amountSats * 0.002));
-    case 'onchain': return Math.max(1000, Math.round(amountSats * 0.01));
-    default: return 0;
-  }
-}
-
 export async function disposeWallet(): Promise<void> {
   if (walletInstance) {
     await walletInstance.dispose();

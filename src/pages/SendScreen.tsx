@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { type NostrKeyPair, identifyInputType } from '../lib/nostr';
-import { sendToAddress, parseInvoiceAmount, estimateFee, type ArkTransaction, type ArkBalance } from '../lib/ark';
+import { sendToAddress, parseInvoiceAmount, type ArkTransaction, type ArkBalance } from '../lib/ark';
 import * as lnbits from '../lib/lnbits';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
@@ -115,10 +115,8 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   };
 
   const sendAmount = amount && Number(amount) > 0 ? Number(amount) : 0;
-  const fee = sendAmount > 0 ? estimateFee(sendAmount, inputType === 'lightning' ? 'lightning' : inputType === 'ark' ? 'ark' : 'onchain') : 0;
-  const total = sendAmount + fee;
   const availableBalance = inputType === 'lightning' ? lnbitsBalance : balance.confirmed;
-  const insufficientBalance = total > 0 && availableBalance < total;
+  const insufficientBalance = sendAmount > 0 && availableBalance < sendAmount;
   const canSend = input.trim() && sendAmount > 0 && inputType !== 'unknown' && !insufficientBalance;
 
   return (
@@ -211,13 +209,9 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
             <span style={{ color: 'var(--text2)' }}>{tFunc('send.amountLabel')}</span>
             <span>{sendAmount.toLocaleString('es-ES')} sats</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-            <span style={{ color: 'var(--text2)' }}>Fee estimado</span>
-            <span>{fee.toLocaleString('es-ES')} sats</span>
-          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700, borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 4 }}>
             <span>Total</span>
-            <span style={{ color: 'var(--accent)' }}>{total.toLocaleString('es-ES')} sats</span>
+            <span style={{ color: 'var(--accent)' }}>{sendAmount.toLocaleString('es-ES')} sats</span>
           </div>
         </div>
       )}
@@ -229,7 +223,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
             <div>
               <div style={{ fontWeight: 600 }}>Saldo insuficiente</div>
               <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
-                Disponible: {availableBalance.toLocaleString('es-ES')} sats | Necesitas: {total.toLocaleString('es-ES')} sats
+                Disponible: {availableBalance.toLocaleString('es-ES')} sats | Necesitas: {sendAmount.toLocaleString('es-ES')} sats
               </div>
             </div>
           </div>
