@@ -188,5 +188,7 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
     timestamp: (p.created_at || Date.now() / 1000) * 1000,
     memo: p.memo || undefined,
     network: 'lightning' as const,
+    fee: p.fee !== undefined ? Math.round(p.fee / 1000) : undefined,
+    status: p.status,
   }));
 }

@@ -13,9 +13,17 @@ export function HistoryScreen({ transactions, onNavigate }: Props) {
     return d.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: 'short',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const statusLabel = (s?: string) => {
+    if (!s || s === 'success') return null;
+    if (s === 'pending') return '⏳';
+    if (s === 'failed') return '❌';
+    return null;
   };
 
   return (
@@ -46,6 +54,7 @@ export function HistoryScreen({ transactions, onNavigate }: Props) {
                     (tx.type === 'incoming'
                       ? tFunc('history.incoming')
                       : tFunc('history.outgoing'))}
+                  {statusLabel(tx.status)}
                 </div>
                 <div className="tx-date">
                   {formatDate(tx.timestamp)}
@@ -59,6 +68,11 @@ export function HistoryScreen({ transactions, onNavigate }: Props) {
                   {tx.type === 'incoming' ? '+' : '-'}
                   {tx.amount.toLocaleString('es-ES')} sats
                 </div>
+                {tx.fee !== undefined && tx.fee > 0 && (
+                  <div className="tx-fiat-val" style={{ color: 'var(--text2)' }}>
+                    Fee: {tx.fee.toLocaleString('es-ES')} sats
+                  </div>
+                )}
                 {tx.fiatAtTime !== undefined && (
                   <div className="tx-fiat-val">
                     ≈ {formatCurrency(tx.fiatAtTime, getCurrency())}

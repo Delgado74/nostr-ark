@@ -26,6 +26,8 @@ export interface ArkTransaction {
   memo?: string;
   network: 'ark' | 'lightning' | 'onchain';
   fiatAtTime?: number;
+  fee?: number;
+  status?: 'pending' | 'success' | 'failed';
 }
 
 export interface SendResult {

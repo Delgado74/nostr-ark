@@ -43,7 +43,14 @@ export const App: React.FC = () => {
       const lnBal = await lnbits.isConnected().then(c => c ? lnbits.getBalance() : 0);
       setLnbitsBalance(lnBal);
 
-      const allTxs = [...txs, ...lnTx].sort((a, b) => b.timestamp - a.timestamp);
+      const seen = new Map<string, ArkTransaction>();
+      for (const tx of [...txs, ...lnTx]) {
+        const existing = seen.get(tx.id);
+        if (!existing || tx.timestamp > existing.timestamp) {
+          seen.set(tx.id, tx);
+        }
+      }
+      const allTxs = Array.from(seen.values()).sort((a, b) => b.timestamp - a.timestamp);
       setTransactions(allTxs);
     } catch {
       // silent fail
