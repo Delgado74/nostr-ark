@@ -21,7 +21,7 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
   const [lnbitsConnected, setLnbitsConnected] = useState(false);
   const [lnbitsName, setLnbitsName] = useState('');
   const [showLnbitsModal, setShowLnbitsModal] = useState(false);
-  const [lnbitsUrl, setLnbitsUrl] = useState('');
+  const [lnbitsUrl, setLnbitsUrl] = useState('https://lachispa.me');
   const [lnbitsKey, setLnbitsKey] = useState('');
   const [lnbitsError, setLnbitsError] = useState('');
   const [lnbitsLoading, setLnbitsLoading] = useState(false);
@@ -333,7 +333,7 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
               <label>{tFunc('settings.lnbitsUrl')}</label>
               <input
                 className="input"
-                placeholder="Introduce la URL manualmente"
+                placeholder="https://lachispa.me"
                 value={lnbitsUrl}
                 onChange={(e) => setLnbitsUrl(e.target.value)}
               />
