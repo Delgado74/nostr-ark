@@ -38,40 +38,30 @@ export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props)
   }, []);
 
   useEffect(() => {
-    const loadAddress = async () => {
-      try {
-        let addr = '';
-        switch (networkType) {
-          case 'ark':
-            addr = await getArkAddress();
-            break;
-          case 'lightning':
-            if (lnbitsConnected && amount && Number(amount) > 0) {
-              setCreatingInvoice(true);
-              try {
-                const result = await lnbits.createInvoice(Number(amount), memo);
-                addr = result.bolt11;
-                setPaymentHash(result.payment_hash);
-                setPendingPayment(true);
-                setPaymentReceived(false);
-              } finally {
-                setCreatingInvoice(false);
-              }
-            } else {
-              addr = '';
-            }
-            break;
-          case 'onchain':
-            addr = await getOnchainAddress();
-            break;
-        }
-        setAddress(addr);
-      } catch {
-        setAddress('');
-      }
-    };
-    loadAddress();
-  }, [networkType, pubkeyHex, amount, memo, network, lnbitsConnected]);
+    if (networkType === 'ark') {
+      getArkAddress().then(setAddress).catch(() => setAddress(''));
+    } else if (networkType === 'onchain') {
+      getOnchainAddress().then(setAddress).catch(() => setAddress(''));
+    } else {
+      setAddress('');
+    }
+  }, [networkType, pubkeyHex, network]);
+
+  const handleGenerateInvoice = async () => {
+    if (!lnbitsConnected || !amount || Number(amount) <= 0) return;
+    setCreatingInvoice(true);
+    try {
+      const result = await lnbits.createInvoice(Number(amount), memo);
+      setAddress(result.bolt11);
+      setPaymentHash(result.payment_hash);
+      setPendingPayment(true);
+      setPaymentReceived(false);
+    } catch {
+      setAddress('');
+    } finally {
+      setCreatingInvoice(false);
+    }
+  };
 
   useEffect(() => {
     if (pendingPayment && paymentHash && networkType === 'lightning') {
@@ -266,6 +256,17 @@ export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props)
         </div>
       )}
 
+      {networkType === 'lightning' && lnbitsConnected && !address && (
+        <button
+          className="btn btn-primary"
+          onClick={handleGenerateInvoice}
+          disabled={creatingInvoice || !amount || Number(amount) <= 0}
+          style={{ marginBottom: 12 }}
+        >
+          {creatingInvoice ? '...' : '⚡ Generar factura'}
+        </button>
+      )}
+
       {networkType === 'lightning' && !lnbitsConnected && (
         <div className="card card-sm" style={{ marginBottom: 12, borderColor: 'var(--yellow)' }}>
           <div style={{ fontSize: 13, color: 'var(--text2)' }}>
@@ -274,11 +275,13 @@ export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props)
         </div>
       )}
 
-      <button className="btn btn-primary" onClick={handleCopy}>
-        {copied
-          ? `✓ ${tFunc('receive.copied')}`
-          : `📎 ${tFunc('receive.copyAddress')}`}
-      </button>
+      {address && (
+        <button className="btn btn-primary" onClick={handleCopy}>
+          {copied
+            ? `✓ ${tFunc('receive.copied')}`
+            : `📎 ${tFunc('receive.copyAddress')}`}
+        </button>
+      )}
     </div>
   );
 }
