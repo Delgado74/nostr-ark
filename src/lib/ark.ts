@@ -174,7 +174,7 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
       id: tx.key.arkTxid || tx.key.boardingTxid || tx.key.commitmentTxid || 'unknown',
       type: tx.type === 'RECEIVED' ? 'incoming' as const : 'outgoing' as const,
       amount: tx.amount,
-      timestamp: tx.createdAt ? tx.createdAt * 1000 : Date.now(),
+      timestamp: tx.createdAt ? (tx.createdAt > 1e14 ? tx.createdAt : tx.createdAt * 1000) : Date.now(),
       memo: undefined,
       network: tx.key.boardingTxid ? 'onchain' as const : 'ark' as const,
     }));
