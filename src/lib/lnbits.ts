@@ -15,10 +15,13 @@ export interface LnbitsPayment {
   bolt11: string;
   amount: number;
   fee: number;
-  status: 'pending' | 'success' | 'failed';
+  status?: 'pending' | 'success' | 'failed';
   memo?: string;
-  created_at: number;
+  created_at?: number | string;
   paid_at?: number;
+  time?: number;
+  timestamp?: number;
+  pending?: boolean;
 }
 
 export interface CreateInvoiceResult {
@@ -179,16 +182,30 @@ export async function getPayments(): Promise<LnbitsPayment[]> {
   }
 }
 
+function parseTimestamp(raw?: number | string): number {
+  if (raw === undefined || raw === null || raw === '') return Date.now();
+  if (typeof raw === 'number') {
+    if (isNaN(raw) || raw <= 0) return Date.now();
+    return raw > 1e14 ? raw : raw * 1000;
+  }
+  const n = Number(raw);
+  if (!isNaN(n) && raw.trim() !== '') {
+    return n > 1e14 ? n : n * 1000;
+  }
+  const parsed = new Date(raw).getTime();
+  return isNaN(parsed) ? Date.now() : parsed;
+}
+
 export async function getTransactions(): Promise<ArkTransaction[]> {
   const payments = await getPayments();
   return payments.map((p) => ({
-    id: p.payment_hash,
+    id: p.payment_hash || `ln-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type: p.amount > 0 ? 'incoming' as const : 'outgoing' as const,
     amount: Math.abs(Math.round(p.amount / 1000)),
-    timestamp: p.created_at ? (p.created_at > 1e14 ? p.created_at : p.created_at * 1000) : Date.now(),
+    timestamp: parseTimestamp(p.created_at ?? p.time ?? p.timestamp),
     memo: p.memo || undefined,
     network: 'lightning' as const,
     fee: p.fee !== undefined ? Math.round(p.fee / 1000) : undefined,
-    status: p.status,
+    status: p.status ?? (p.pending ? 'pending' as const : 'success' as const),
   }));
 }
