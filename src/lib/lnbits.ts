@@ -22,6 +22,8 @@ export interface LnbitsPayment {
   time?: number;
   timestamp?: number;
   pending?: boolean;
+  preimage?: string;
+  destination?: string;
 }
 
 export interface CreateInvoiceResult {
@@ -168,8 +170,16 @@ export async function checkPayment(paymentHash: string): Promise<boolean> {
   }
 }
 
-export async function getPayments(): Promise<LnbitsPayment[]> {
+export async function getPaymentDetails(paymentHash: string): Promise<LnbitsPayment | null> {
   try {
+    const data = await apiRequest('GET', `/api/v1/payments/${paymentHash}`);
+    return data as LnbitsPayment;
+  } catch {
+    return null;
+  }
+}
+
+export async function getPayments(): Promise<LnbitsPayment[]> {  try {
     const data = await apiRequest('GET', '/api/v1/payments?limit=50');
     if (Array.isArray(data)) return data as LnbitsPayment[];
     if (data && typeof data === 'object' && 'details' in (data as Record<string, unknown>)) {
@@ -207,5 +217,8 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
     network: 'lightning' as const,
     fee: p.fee !== undefined ? Math.round(p.fee / 1000) : undefined,
     status: p.status ?? (p.pending ? 'pending' as const : 'success' as const),
+    paymentHash: p.payment_hash,
+    bolt11: p.bolt11,
+    destination: p.destination,
   }));
 }

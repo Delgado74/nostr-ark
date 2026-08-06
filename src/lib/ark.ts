@@ -28,6 +28,12 @@ export interface ArkTransaction {
   fiatAtTime?: number;
   fee?: number;
   status?: 'pending' | 'success' | 'failed';
+  paymentHash?: string;
+  preimage?: string;
+  destination?: string;
+  destinationPubkey?: string;
+  bolt11?: string;
+  txid?: string;
 }
 
 export interface SendResult {
@@ -177,6 +183,7 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
       timestamp: tx.createdAt ? (tx.createdAt > 1e14 ? tx.createdAt : tx.createdAt * 1000) : Date.now(),
       memo: undefined,
       network: tx.key.boardingTxid ? 'onchain' as const : 'ark' as const,
+      txid: tx.key.arkTxid || tx.key.commitmentTxid || tx.key.boardingTxid || undefined,
     }));
   } catch {
     return [];

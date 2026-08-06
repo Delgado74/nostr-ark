@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { type ArkTransaction } from '../lib/ark';
 import { formatCurrency, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
+import { TransactionDetail } from '../components/TransactionDetail';
 
 interface Props {
   transactions: ArkTransaction[];
@@ -8,6 +10,8 @@ interface Props {
 }
 
 export function HistoryScreen({ transactions, onNavigate }: Props) {
+  const [selected, setSelected] = useState<ArkTransaction | null>(null);
+
   const formatDate = (ts: number) => {
     if (!ts || isNaN(ts)) return '-';
     const d = new Date(ts);
@@ -45,7 +49,12 @@ export function HistoryScreen({ transactions, onNavigate }: Props) {
       ) : (
         <div className="card">
           {transactions.map((tx) => (
-            <div key={tx.id} className="tx-item">
+            <div
+              key={tx.id}
+              className="tx-item"
+              onClick={() => setSelected(tx)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className={`tx-icon ${tx.type}`}>
                 {tx.type === 'incoming' ? '↙' : '↗'}
               </div>
@@ -83,6 +92,10 @@ export function HistoryScreen({ transactions, onNavigate }: Props) {
             </div>
           ))}
         </div>
+      )}
+
+      {selected && (
+        <TransactionDetail tx={selected} onClose={() => setSelected(null)} />
       )}
     </div>
   );
