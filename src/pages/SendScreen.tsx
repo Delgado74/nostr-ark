@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { type NostrKeyPair, identifyInputType } from '../lib/nostr';
 import { sendToAddress, parseInvoiceAmount, type ArkTransaction, type ArkBalance } from '../lib/ark';
 import * as lnbits from '../lib/lnbits';
-import { satsToFiat, getCurrency } from '../lib/yadio';
+import { satsToFiat, getCurrency, getSatsPerUnit } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
 import { QrScanner } from '../components/QrScanner';
 import { Clipboard } from '@capacitor/clipboard';
@@ -20,6 +20,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [fiatEstimate, setFiatEstimate] = useState('...');
+  const [fiatAtTime, setFiatAtTime] = useState<number | undefined>(undefined);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
@@ -29,10 +30,14 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   const handleAmountChange = async (val: string) => {
     setAmount(val);
     if (val && Number(val) > 0) {
-      const fiat = await satsToFiat(Number(val), getCurrency());
+      const sats = Number(val);
+      const fiat = await satsToFiat(sats, getCurrency());
       setFiatEstimate(fiat);
+      const rate = await getSatsPerUnit(getCurrency());
+      setFiatAtTime((sats / 100000000) * rate);
     } else {
       setFiatEstimate('...');
+      setFiatAtTime(undefined);
     }
   };
 
@@ -82,7 +87,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
           timestamp: Date.now(),
           memo: memo || undefined,
           network: 'lightning',
-          fiatAtTime: fiatEstimate !== '...' ? Number(fiatEstimate.replace(/[^0-9.]/g, '')) : undefined,
+          fiatAtTime: fiatAtTime,
           status: 'success',
           paymentHash: result.payment_hash,
           bolt11: input.trim(),
@@ -104,7 +109,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
             timestamp: Date.now(),
             memo: memo || undefined,
             network: inputType === 'ark' ? 'ark' : 'onchain',
-            fiatAtTime: fiatEstimate !== '...' ? Number(fiatEstimate.replace(/[^0-9.]/g, '')) : undefined,
+            fiatAtTime: fiatAtTime,
           };
           onTx(tx);
           onNavigate('dash');
