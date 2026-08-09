@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { type NostrKeyPair, identifyInputType } from '../lib/nostr';
 import { sendToAddress, parseInvoiceAmount, type ArkTransaction, type ArkBalance } from '../lib/ark';
+import { decodeBolt11 } from '../lib/bolt11';
 import * as lnbits from '../lib/lnbits';
 import { satsToFiat, getCurrency, getSatsPerUnit } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
@@ -41,16 +42,31 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
     }
   };
 
+  const applyInvoice = (raw: string) => {
+    const clean = raw.replace(/^lightning:/i, '');
+    setInput(clean);
+    setError('');
+    const decoded = decodeBolt11(clean);
+    if (decoded) {
+      if (decoded.amountMsat > 0) {
+        setAmount((decoded.amountMsat / 1000).toString());
+      }
+      if (decoded.description) {
+        setMemo(decoded.description);
+      }
+    } else {
+      const parsed = parseInvoiceAmount(clean);
+      if (parsed > 0) {
+        setAmount(parsed.toString());
+      }
+    }
+  };
+
   const handlePaste = async () => {
     try {
       const { value } = await Clipboard.read();
       if (value) {
-        const clean = value.replace(/^lightning:/i, '');
-        setInput(clean);
-        const parsed = parseInvoiceAmount(clean);
-        if (parsed > 0) {
-          setAmount(parsed.toString());
-        }
+        applyInvoice(value);
       }
     } catch {
       // clipboard unavailable
@@ -62,14 +78,8 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   };
 
   const handleQrResult = (data: string) => {
-    const clean = data.replace(/^lightning:/i, '');
-    setInput(clean);
+    applyInvoice(data);
     setShowScanner(false);
-    setError('');
-    const parsed = parseInvoiceAmount(clean);
-    if (parsed > 0) {
-      setAmount(parsed.toString());
-    }
   };
 
   const handleSend = async () => {
@@ -148,13 +158,7 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
           placeholder={tFunc('send.invoicePlaceholder')}
           value={input}
           onChange={(e) => {
-            const val = e.target.value.replace(/^lightning:/i, '');
-            setInput(val);
-            setError('');
-            const parsed = parseInvoiceAmount(val);
-            if (parsed > 0) {
-              setAmount(parsed.toString());
-            }
+            applyInvoice(e.target.value);
           }}
           style={{ marginBottom: 8 }}
         />

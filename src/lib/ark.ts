@@ -224,7 +224,7 @@ export function parseInvoiceAmount(invoice: string): number {
   else return 0;
 
   const afterPrefix = lower.slice(prefix.length);
-  if (!afterPrefix || afterPrefix[0] === '1') return 0;
+  if (!afterPrefix) return 0;
 
   let amountStr = '';
   let multiplier = 0;
