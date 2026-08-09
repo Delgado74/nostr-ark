@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { type NostrKeyPair } from '../lib/nostr';
-import { storage } from '../lib/storage';
+import { storage, KEYS } from '../lib/storage';
 import { setLang, getLang, tFunc, type Lang, setNetwork, getNetwork, type Network } from '../lib/i18n';
 import { setCurrency, getCurrency, type Currency } from '../lib/yadio';
 import { Clipboard } from '@capacitor/clipboard';
@@ -17,6 +17,11 @@ interface Props {
 export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange }: Props) {
   const [showBackup, setShowBackup] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedWords, setCopiedWords] = useState(false);
+  const [copiedNpub, setCopiedNpub] = useState(false);
+  const [revealSeed, setRevealSeed] = useState(false);
+  const [revealNsec, setRevealNsec] = useState(false);
+  const [mnemonic, setMnemonic] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [lnbitsConnected, setLnbitsConnected] = useState(false);
   const [lnbitsName, setLnbitsName] = useState('');
@@ -42,6 +47,14 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
     };
     checkLnbits();
   }, []);
+
+  useEffect(() => {
+    const loadMnemonic = async () => {
+      const stored = await storage.get(KEYS.MNEMONIC);
+      setMnemonic(stored || '');
+    };
+    loadMnemonic();
+  }, [showBackup]);
 
   const handleQrScanResult = async (data: string) => {
     setShowQrScanner(false);
@@ -109,6 +122,26 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
       await Clipboard.write({ string: keypair.nsec });
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable
+    }
+  };
+
+  const handleCopyWords = async () => {
+    try {
+      await Clipboard.write({ string: mnemonic });
+      setCopiedWords(true);
+      setTimeout(() => setCopiedWords(false), 2000);
+    } catch {
+      // clipboard unavailable
+    }
+  };
+
+  const handleCopyNpub = async () => {
+    try {
+      await Clipboard.write({ string: keypair.npub });
+      setCopiedNpub(true);
+      setTimeout(() => setCopiedNpub(false), 2000);
     } catch {
       // clipboard unavailable
     }
@@ -233,6 +266,8 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
           className="modal-overlay"
           onClick={() => {
             setShowBackup(false);
+            setRevealSeed(false);
+            setRevealNsec(false);
             setConfirmDelete(false);
           }}
         >
@@ -250,24 +285,135 @@ export function SettingsScreen({ keypair, onNavigate, onLogout, onNetworkChange 
             >
               {tFunc('settings.backupWarning')}
             </p>
-            <div
-              style={{
-                background: 'var(--surface2)',
-                padding: 16,
-                borderRadius: 12,
-                wordBreak: 'break-all',
-                fontSize: 13,
-                fontFamily: 'monospace',
-                marginBottom: 16,
-              }}
-            >
-              {keypair.nsec}
+
+            {mnemonic && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                  🗝 {tFunc('settings.seed')}
+                </p>
+                <div
+                  style={{
+                    background: 'var(--surface2)',
+                    padding: 12,
+                    borderRadius: 12,
+                    marginBottom: 8,
+                  }}
+                >
+                  {revealSeed ? (
+                    <div className="words-grid" style={{ maxWidth: 'none', marginBottom: 0 }}>
+                      {mnemonic.split(' ').map((w, i) => (
+                        <div key={i} className="word">
+                          <span className="word-index">{i + 1}</span>
+                          <span>{w}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {mnemonic
+                        .split(' ')
+                        .map(() => '••••')
+                        .join(' ')}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ flex: 1, padding: '8px', fontSize: 13 }}
+                    onClick={() => setRevealSeed(!revealSeed)}
+                  >
+                    {revealSeed ? `🙈 ${tFunc('settings.hide')}` : `👁 ${tFunc('settings.reveal')}`}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ flex: 1, padding: '8px', fontSize: 13 }}
+                    onClick={handleCopyWords}
+                  >
+                    {copiedWords ? '✓ Copiado' : `📋 ${tFunc('settings.copyWords')}`}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                🔑 {tFunc('settings.nsec')}
+              </p>
+              <div
+                style={{
+                  background: 'var(--surface2)',
+                  padding: 12,
+                  borderRadius: 12,
+                  wordBreak: 'break-all',
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  marginBottom: 8,
+                }}
+              >
+                {revealNsec
+                  ? keypair.nsec
+                  : `${keypair.nsec.slice(0, 12)}…${keypair.nsec.slice(-12)}`}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1, padding: '8px', fontSize: 13 }}
+                  onClick={() => setRevealNsec(!revealNsec)}
+                >
+                  {revealNsec ? `🙈 ${tFunc('settings.hide')}` : `👁 ${tFunc('settings.reveal')}`}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1, padding: '8px', fontSize: 13 }}
+                  onClick={handleCopyNsec}
+                >
+                  {copied ? '✓ Copiado' : `📋 ${tFunc('settings.copyNsec')}`}
+                </button>
+              </div>
             </div>
-            <button className="btn btn-primary" onClick={handleCopyNsec}>
-              {copied
-                ? '✓ Copiado'
-                : `📋 ${tFunc('settings.copyNsec')}`}
-            </button>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                👤 {tFunc('settings.npub')}
+              </p>
+              <div
+                style={{
+                  background: 'var(--surface2)',
+                  padding: 12,
+                  borderRadius: 12,
+                  wordBreak: 'break-all',
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  marginBottom: 8,
+                }}
+              >
+                {keypair.npub}
+              </div>
+              <button
+                className="btn btn-secondary"
+                style={{ width: '100%', padding: '8px', fontSize: 13 }}
+                onClick={handleCopyNpub}
+              >
+                {copiedNpub ? '✓ Copiado' : `📋 ${tFunc('settings.copyNpub')}`}
+              </button>
+              <p
+                style={{
+                  fontSize: 12,
+                  color: 'var(--text2)',
+                  marginTop: 6,
+                }}
+              >
+                {tFunc('settings.npubHint')}
+              </p>
+            </div>
+
             <button
               className="btn btn-secondary"
               style={{ marginTop: 8 }}

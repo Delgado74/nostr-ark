@@ -26,8 +26,7 @@ function bech32Decode(prefix: string, encoded: string): Uint8Array {
   return new Uint8Array(data.slice(1));
 }
 
-export function generateKeyPair(): NostrKeyPair {
-  const privkey = schnorr.utils.randomPrivateKey();
+export function keyPairFromPrivkey(privkey: Uint8Array): NostrKeyPair {
   const pubkey = schnorr.getPublicKey(privkey);
 
   return {
@@ -36,6 +35,10 @@ export function generateKeyPair(): NostrKeyPair {
     privkey,
     pubkey,
   };
+}
+
+export function generateKeyPair(): NostrKeyPair {
+  return keyPairFromPrivkey(schnorr.utils.randomPrivateKey());
 }
 
 export function importFromNsec(nsec: string): NostrKeyPair {

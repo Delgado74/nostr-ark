@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { generateKeyPair, importFromNsec, type NostrKeyPair } from '../lib/nostr';
+import { generateMnemonicKeypair, importFromMnemonic, isMnemonic, type MnemonicKeypair } from '../lib/mnemonic';
 import { storage, KEYS } from '../lib/storage';
 import { tFunc } from '../lib/i18n';
 
@@ -12,14 +13,16 @@ export function AuthScreen({ onAuthenticated }: Props) {
   const [nsecInput, setNsecInput] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [pendingMnemonic, setPendingMnemonic] = useState<MnemonicKeypair | null>(null);
 
   const handleCreate = async () => {
     setCreating(true);
     try {
-      const kp = generateKeyPair();
-      await storage.set(KEYS.NSEC, kp.nsec);
-      await storage.set(KEYS.NPUB, kp.npub);
-      onAuthenticated(kp);
+      const mkp = generateMnemonicKeypair();
+      await storage.set(KEYS.NSEC, mkp.keypair.nsec);
+      await storage.set(KEYS.NPUB, mkp.keypair.npub);
+      await storage.set(KEYS.MNEMONIC, mkp.mnemonic);
+      setPendingMnemonic(mkp);
     } catch {
       setError(tFunc('auth.importError'));
     } finally {
@@ -27,16 +30,61 @@ export function AuthScreen({ onAuthenticated }: Props) {
     }
   };
 
+  const handleConfirmWords = () => {
+    if (pendingMnemonic) {
+      onAuthenticated(pendingMnemonic.keypair);
+    }
+  };
+
+  const handleBackToCreate = () => {
+    setPendingMnemonic(null);
+  };
+
   const handleImport = async () => {
     try {
-      const kp = importFromNsec(nsecInput);
-      await storage.set(KEYS.NSEC, kp.nsec);
-      await storage.set(KEYS.NPUB, kp.npub);
-      onAuthenticated(kp);
+      if (isMnemonic(nsecInput)) {
+        const mkp = importFromMnemonic(nsecInput);
+        await storage.set(KEYS.NSEC, mkp.keypair.nsec);
+        await storage.set(KEYS.NPUB, mkp.keypair.npub);
+        await storage.set(KEYS.MNEMONIC, mkp.mnemonic);
+        onAuthenticated(mkp.keypair);
+      } else {
+        const kp = importFromNsec(nsecInput);
+        await storage.set(KEYS.NSEC, kp.nsec);
+        await storage.set(KEYS.NPUB, kp.npub);
+        onAuthenticated(kp);
+      }
     } catch {
       setError(tFunc('auth.importError'));
     }
   };
+
+  if (pendingMnemonic) {
+    const words = pendingMnemonic.mnemonic.split(' ');
+    return (
+      <div className="auth-screen">
+        <div className="auth-logo">✍️</div>
+        <h1 className="auth-title">{tFunc('auth.wordsTitle')}</h1>
+        <p className="auth-subtitle">{tFunc('auth.wordsWarning')}</p>
+        <div className="words-grid">
+          {words.map((w, i) => (
+            <div key={i} className="word">
+              <span className="word-index">{i + 1}</span>
+              <span>{w}</span>
+            </div>
+          ))}
+        </div>
+        <div className="auth-actions">
+          <button className="btn btn-primary" onClick={handleConfirmWords}>
+            {tFunc('auth.wordsConfirm')}
+          </button>
+          <button className="btn btn-secondary" onClick={handleBackToCreate}>
+            {tFunc('auth.wordsBack')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-screen">

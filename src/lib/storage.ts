@@ -22,6 +22,7 @@ export const storage = {
 export const KEYS = {
   NSEC: 'nostrark_nsec',
   NPUB: 'nostrark_npub',
+  MNEMONIC: 'nostrark_mnemonic',
   LANG: 'nostrark_lang',
   CURRENCY: 'nostrark_currency',
   TXS: 'nostrark_transactions',
