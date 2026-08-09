@@ -32,21 +32,18 @@ jobs:
         run: npm run build
 
       - name: Initialize Capacitor
-        run: npx cap add android || true
+        run: npx cap add android
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Configure Android for barcode scanning
+      - name: Prepare Android manifest (camera + ML Kit)
+        run: node scripts/prepare-android.mjs
+
+      - name: Verify camera permissions in manifest
         run: |
-          # Add camera permissions
-          sed -i 's|</manifest>|    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.FLASHLIGHT"/>\n</manifest>|' android/app/src/main/AndroidManifest.xml
-
-          # Add ML Kit metadata inside <application> tag
-          sed -i 's|android:theme="@style/AppTheme">|android:theme="@style/AppTheme">\n        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui"/>|' android/app/src/main/AndroidManifest.xml
-
-          # Enable data binding in build.gradle
-          sed -i '/android {/a\    buildFeatures {\n        dataBinding true\n    }\n    dataBinding {\n        enabled = true\n    }' android/app/build.gradle
+          grep -q 'android.permission.CAMERA' android/app/src/main/AndroidManifest.xml
+          grep -q 'com.google.mlkit.vision.DEPENDENCIES' android/app/src/main/AndroidManifest.xml
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
