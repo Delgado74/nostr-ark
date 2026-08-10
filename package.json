@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.4.52",
+    "@arkade-os/sdk": "^0.4.58",
     "@capacitor-mlkit/barcode-scanning": "^6.2.0",
     "@capacitor/android": "^6.0.0",
     "@capacitor/app": "^6.0.0",
