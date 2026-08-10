@@ -1,4 +1,4 @@
-import { Wallet, SingleKey, VtxoManager, type Wallet as WalletType } from '@arkade-os/sdk';
+import { Wallet, SingleKey, VtxoManager, Ramps, type Wallet as WalletType } from '@arkade-os/sdk';
 import { bytesToHex } from '@noble/hashes/utils';
 
 const ARK_SERVER_URL = 'https://arkade.computer';
@@ -8,6 +8,11 @@ export interface ArkBalance {
   pending: number;
   recoverable: number;
   total: number;
+  onchain: {
+    confirmed: number;
+    unconfirmed: number;
+    total: number;
+  };
 }
 
 export interface VtxoInfo {
@@ -74,7 +79,9 @@ export async function resetWallet(): Promise<void> {
 }
 
 export async function getBalance(): Promise<ArkBalance> {
-  if (!walletInstance) return { confirmed: 0, pending: 0, recoverable: 0, total: 0 };
+  if (!walletInstance) {
+    return { confirmed: 0, pending: 0, recoverable: 0, total: 0, onchain: { confirmed: 0, unconfirmed: 0, total: 0 } };
+  }
 
   try {
     const balance = await walletInstance.getBalance();
@@ -83,9 +90,14 @@ export async function getBalance(): Promise<ArkBalance> {
       pending: Number(balance.preconfirmed || 0n),
       recoverable: Number(balance.recoverable || 0n),
       total: Number(balance.total || 0n),
+      onchain: {
+        confirmed: Number(balance.boarding?.confirmed || 0),
+        unconfirmed: Number(balance.boarding?.unconfirmed || 0),
+        total: Number(balance.boarding?.total || 0),
+      },
     };
   } catch {
-    return { confirmed: 0, pending: 0, recoverable: 0, total: 0 };
+    return { confirmed: 0, pending: 0, recoverable: 0, total: 0, onchain: { confirmed: 0, unconfirmed: 0, total: 0 } };
   }
 }
 
@@ -202,6 +214,29 @@ export async function sendToAddress(
   });
 
   return { success: true, txId: txid };
+}
+
+export async function onboardToArk(): Promise<SendResult> {
+  if (!walletInstance) throw new Error('Wallet not initialized');
+
+  const ramps = new Ramps(walletInstance);
+  const { fees } = await walletInstance.arkProvider.getInfo();
+  const txId = await ramps.onboard(fees);
+
+  return { success: true, txId };
+}
+
+export async function offboardToOnchain(
+  to: string,
+  amountSats: number,
+): Promise<SendResult> {
+  if (!walletInstance) throw new Error('Wallet not initialized');
+
+  const ramps = new Ramps(walletInstance);
+  const { fees } = await walletInstance.arkProvider.getInfo();
+  const txId = await ramps.offboard(to, fees, BigInt(amountSats));
+
+  return { success: true, txId };
 }
 
 export async function finalizePendingTxs(): Promise<{ finalized: string[]; pending: string[] }> {

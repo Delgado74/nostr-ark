@@ -14,7 +14,13 @@ import { SettingsScreen } from './pages/SettingsScreen';
 export const App: React.FC = () => {
   const [keypair, setKeypair] = useState<NostrKeyPair | null>(null);
   const [page, setPage] = useState('auth');
-  const [balance, setBalance] = useState<ArkBalance>({ confirmed: 0, pending: 0, recoverable: 0, total: 0 });
+  const [balance, setBalance] = useState<ArkBalance>({
+    confirmed: 0,
+    pending: 0,
+    recoverable: 0,
+    total: 0,
+    onchain: { confirmed: 0, unconfirmed: 0, total: 0 },
+  });
   const [lnbitsBalance, setLnbitsBalance] = useState(0);
   const [transactions, setTransactions] = useState<ArkTransaction[]>([]);
   const [vtxos, setVtxos] = useState<VtxoInfo[]>([]);
@@ -55,8 +61,8 @@ export const App: React.FC = () => {
       }
       const allTxs = Array.from(seen.values()).sort((a, b) => b.timestamp - a.timestamp);
       setTransactions(allTxs);
-    } catch {
-      // silent fail
+    } catch (err) {
+      console.error('refreshData failed:', err);
     }
   }, [walletReady]);
 
@@ -134,7 +140,13 @@ export const App: React.FC = () => {
     await resetWallet();
     setWalletReady(false);
     setKeypair(null);
-    setBalance({ confirmed: 0, pending: 0, recoverable: 0, total: 0 });
+    setBalance({
+      confirmed: 0,
+      pending: 0,
+      recoverable: 0,
+      total: 0,
+      onchain: { confirmed: 0, unconfirmed: 0, total: 0 },
+    });
     setLnbitsBalance(0);
     setTransactions([]);
     setVtxos([]);
@@ -160,6 +172,18 @@ export const App: React.FC = () => {
     } finally {
       setRecovering(false);
     }
+  }, [refreshData]);
+
+  const handleOnboard = useCallback(async () => {
+    const m = await import('./lib/ark');
+    await m.onboardToArk();
+    await refreshData();
+  }, [refreshData]);
+
+  const handleOffboard = useCallback(async (address: string, amountSats: number) => {
+    const m = await import('./lib/ark');
+    await m.offboardToOnchain(address, amountSats);
+    await refreshData();
   }, [refreshData]);
 
   if (loading) {
@@ -190,6 +214,8 @@ export const App: React.FC = () => {
           onRecover={handleRecover}
           renewing={renewing}
           recovering={recovering}
+          onOnboard={handleOnboard}
+          onOffboard={handleOffboard}
         />
       )}
       {page === 'send' && (
