@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { type NostrKeyPair, getPubkeyHex } from '../lib/nostr';
-import { getArkAddress, getOnchainAddress } from '../lib/ark';
+import { getArkAddress, getOnchainAddress, getNewOnchainAddress } from '../lib/ark';
 import * as lnbits from '../lib/lnbits';
 import { satsToFiat, getCurrency } from '../lib/yadio';
 import { tFunc } from '../lib/i18n';
@@ -24,6 +24,7 @@ export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props)
   const [networkType, setNetworkType] = useState<NetworkType>('ark');
   const [lnbitsConnected, setLnbitsConnected] = useState(false);
   const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [creatingAddress, setCreatingAddress] = useState(false);
   const [pendingPayment, setPendingPayment] = useState(false);
   const [paymentReceived, setPaymentReceived] = useState(false);
   const [paymentHash, setPaymentHash] = useState('');
@@ -59,6 +60,19 @@ export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props)
       setAddress('');
     } finally {
       setCreatingInvoice(false);
+    }
+  };
+
+  const handleGenerateNewAddress = async () => {
+    if (networkType !== 'onchain') return;
+    setCreatingAddress(true);
+    try {
+      const addr = await getNewOnchainAddress();
+      setAddress(addr);
+    } catch {
+      setAddress('');
+    } finally {
+      setCreatingAddress(false);
     }
   };
 
@@ -272,6 +286,17 @@ export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props)
             ⚡ Conecta tu LNbits en Ajustes para recibir Lightning
           </div>
         </div>
+      )}
+
+      {networkType === 'onchain' && (
+        <button
+          className="btn btn-secondary"
+          onClick={handleGenerateNewAddress}
+          disabled={creatingAddress}
+          style={{ marginBottom: 12 }}
+        >
+          {creatingAddress ? '...' : '🔄 Nueva dirección'}
+        </button>
       )}
 
       {address && (

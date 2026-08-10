@@ -1,5 +1,6 @@
-import { Wallet, SingleKey, VtxoManager, Ramps, type Wallet as WalletType } from '@arkade-os/sdk';
-import { bytesToHex } from '@noble/hashes/utils';
+import { Wallet, SeedIdentity, VtxoManager, Ramps, type Wallet as WalletType } from '@arkade-os/sdk';
+import { bytesToHex, utf8ToBytes, concatBytes } from '@noble/hashes/utils';
+import { sha256 } from '@noble/hashes/sha256';
 
 const ARK_SERVER_URL = 'https://arkade.computer';
 
@@ -48,14 +49,23 @@ export interface SendResult {
 let walletInstance: WalletType | null = null;
 let vtxoManagerInstance: VtxoManager | null = null;
 
+function seedFromPrivkey(privkeyHex: string): Uint8Array {
+  const a = sha256(utf8ToBytes(`nostr-ark-hd:${privkeyHex}`));
+  const b = sha256(utf8ToBytes(`nostr-ark-hd:${privkeyHex}:2`));
+  return concatBytes(a, b);
+}
+
 export async function initArkWallet(privkeyHex: string): Promise<WalletType> {
   if (walletInstance) return walletInstance;
 
-  const identity = SingleKey.fromHex(privkeyHex);
+  const identity = SeedIdentity.fromSeed(seedFromPrivkey(privkeyHex), {
+    isMainnet: false,
+  });
 
   walletInstance = await Wallet.create({
     identity,
     arkServerUrl: ARK_SERVER_URL,
+    walletMode: 'hd',
     settlementConfig: {
       vtxoThreshold: 259200,
       boardingUtxoSweep: true,
@@ -109,6 +119,11 @@ export async function getArkAddress(): Promise<string> {
 export async function getOnchainAddress(): Promise<string> {
   if (!walletInstance) throw new Error('Wallet not initialized');
   return await walletInstance.getBoardingAddress();
+}
+
+export async function getNewOnchainAddress(): Promise<string> {
+  if (!walletInstance) throw new Error('Wallet not initialized');
+  return await walletInstance.getNewBoardingAddress();
 }
 
 export async function createLightningInvoice(
