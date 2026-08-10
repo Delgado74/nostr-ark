@@ -53,6 +53,7 @@ const t: Record<Lang, Record<string, string>> = {
     'convert.withdrawAmountPlaceholder': 'Monto en sats',
     'convert.onboardSuccess': 'Convertido: ahora está en saldo Ark.',
     'convert.withdrawSuccess': 'Retiro iniciado.',
+    'tx.viewExplorer': 'Ver en el explorador',
 
     // Send
     'send.title': 'Enviar',
@@ -179,6 +180,7 @@ const t: Record<Lang, Record<string, string>> = {
     'convert.withdrawAmountPlaceholder': 'Amount in sats',
     'convert.onboardSuccess': 'Converted: now in Ark balance.',
     'convert.withdrawSuccess': 'Withdrawal started.',
+    'tx.viewExplorer': 'View in explorer',
 
     // Send
     'send.title': 'Send',

@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { type ArkTransaction } from '../lib/ark';
 import { satsToFiat, formatCurrency, getCurrency } from '../lib/yadio';
 import * as lnbits from '../lib/lnbits';
+import { Clipboard } from '@capacitor/clipboard';
+import { tFunc } from '../lib/i18n';
+
+const EXPLORER_URL = 'https://mempool.signet.arkade.sh/tx/';
 
 interface Props {
   tx: ArkTransaction;
@@ -11,6 +15,7 @@ interface Props {
 export function TransactionDetail({ tx, onClose }: Props) {
   const [details, setDetails] = useState<lnbits.LnbitsPayment | null>(null);
   const [fiatNow, setFiatNow] = useState('...');
+  const [copied, setCopied] = useState('');
 
   useEffect(() => {
     if (tx.network === 'lightning' && tx.paymentHash) {
@@ -35,6 +40,21 @@ export function TransactionDetail({ tx, onClose }: Props) {
     });
   };
 
+  const copy = async (value: string, label: string) => {
+    try {
+      await Clipboard.write({ string: value });
+      setCopied(label);
+      setTimeout(() => setCopied(''), 2000);
+    } catch {
+      // clipboard unavailable
+    }
+  };
+
+  const openExplorer = () => {
+    if (!tx.onchainTxid) return;
+    window.open(`${EXPLORER_URL}${tx.onchainTxid}`, '_system');
+  };
+
   const short = (s?: string) => {
     if (!s) return '';
     return s.length > 28 ? `${s.slice(0, 14)}…${s.slice(-14)}` : s;
@@ -45,7 +65,7 @@ export function TransactionDetail({ tx, onClose }: Props) {
   const fee = details?.fee !== undefined ? Math.round(details.fee / 1000) : tx.fee;
   const status = details?.status || tx.status;
 
-  const rows: { label: string; value: string; mono?: boolean }[] = [];
+  const rows: { label: string; value: string; mono?: boolean; full?: boolean }[] = [];
 
   if (tx.memo) rows.push({ label: 'Memo', value: tx.memo });
   if (fee !== undefined && fee > 0) rows.push({ label: 'Fee', value: `${fee.toLocaleString('es-ES')} sats` });
@@ -54,8 +74,11 @@ export function TransactionDetail({ tx, onClose }: Props) {
   if (preimage) rows.push({ label: 'Preimagen', value: short(preimage), mono: true });
   if (destination) rows.push({ label: 'Destino', value: short(destination), mono: true });
   if (tx.bolt11) rows.push({ label: 'Factura (bolt11)', value: short(tx.bolt11), mono: true });
-  if (tx.txid) rows.push({ label: 'TXID', value: short(tx.txid), mono: true });
-  if (tx.id && tx.network !== 'lightning') rows.push({ label: 'ID', value: short(tx.id), mono: true });
+  if (tx.onchainTxid) rows.push({ label: 'TXID', value: tx.onchainTxid, mono: true, full: true });
+  if (tx.txid && tx.txid !== tx.onchainTxid) rows.push({ label: 'ID', value: tx.txid, mono: true, full: true });
+  else if (tx.id && tx.id !== 'unknown' && tx.id !== tx.onchainTxid && tx.id !== tx.txid) {
+    rows.push({ label: 'ID', value: tx.id, mono: true, full: true });
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -111,16 +134,29 @@ export function TransactionDetail({ tx, onClose }: Props) {
           <div key={r.label} style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 2 }}>{r.label}</div>
             <div
+              onClick={() => r.full && copy(r.value, r.label)}
               style={{
                 fontSize: 13,
                 wordBreak: 'break-all',
                 fontFamily: r.mono ? 'monospace' : 'inherit',
+                cursor: r.full ? 'pointer' : 'default',
               }}
             >
               {r.value}
+              {r.full && (
+                <span style={{ color: 'var(--text2)', fontSize: 11, marginLeft: 6 }}>
+                  {copied === r.label ? '✓ copiado' : '📋'}
+                </span>
+              )}
             </div>
           </div>
         ))}
+
+        {tx.onchainTxid && (
+          <button className="btn btn-primary" onClick={openExplorer} style={{ marginTop: 8 }}>
+            🔍 {tFunc('tx.viewExplorer')}
+          </button>
+        )}
 
         <button className="btn btn-secondary" onClick={onClose} style={{ marginTop: 8 }}>
           Cerrar
