@@ -1,7 +1,7 @@
 import { Wallet, SingleKey, VtxoManager, type Wallet as WalletType } from '@arkade-os/sdk';
 import { bytesToHex } from '@noble/hashes/utils';
 
-const ARK_SERVER_URL = 'https://arkade.computer';
+const ARK_SERVER_URL = 'https://signet.arkade.sh';
 
 export interface ArkBalance {
   confirmed: number;
