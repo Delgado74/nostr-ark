@@ -22,8 +22,8 @@ function bech32Encode(prefix: string, data: Uint8Array): string {
 function bech32Decode(prefix: string, encoded: string): Uint8Array {
   const decoded = bech32.decode(encoded, 100);
   if (decoded.prefix !== prefix) throw new Error(`Invalid prefix: ${decoded.prefix}`);
-  const data = bech32.fromWords(decoded.words);
-  return new Uint8Array(data.slice(1));
+  const data = bech32.fromWords(decoded.words.slice(1));
+  return new Uint8Array(data);
 }
 
 export function keyPairFromPrivkey(privkey: Uint8Array): NostrKeyPair {
