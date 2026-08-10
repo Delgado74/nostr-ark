@@ -34,6 +34,7 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.vtxoRecoverable': 'recuperables',
     'dash.vtxoRecover': 'Recuperar',
     'dash.vtxoRecovering': 'Recuperando...',
+    'dash.onchainRetry': 'Reintentar conversión a Ark',
 
     // Convert
     'convert.title': 'Convertir',
@@ -73,6 +74,12 @@ const t: Record<Lang, Record<string, string>> = {
     'send.type.lightning': 'Lightning',
     'send.type.ark': 'Ark',
     'send.type.onchain': 'On-chain',
+    'send.onchainTitle': 'Retiro a onchain',
+    'send.onchainInfo': 'Tu saldo Ark se enviará a esta dirección onchain externa.',
+    'send.onchainFee': 'Fee estimado',
+    'send.onchainFeeHint': '(aprox.)',
+    'send.onchainRecv': 'El destinatario recibirá',
+    'send.errorGeneric': 'Error al enviar',
 
     // Receive
     'receive.title': 'Recibir',
@@ -161,6 +168,7 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.vtxoRecoverable': 'recoverable',
     'dash.vtxoRecover': 'Recover',
     'dash.vtxoRecovering': 'Recovering...',
+    'dash.onchainRetry': 'Retry converting to Ark',
 
     // Convert
     'convert.title': 'Convert',
@@ -200,6 +208,12 @@ const t: Record<Lang, Record<string, string>> = {
     'send.type.lightning': 'Lightning',
     'send.type.ark': 'Ark',
     'send.type.onchain': 'On-chain',
+    'send.onchainTitle': 'On-chain withdrawal',
+    'send.onchainInfo': 'Your Ark balance will be sent to this external on-chain address.',
+    'send.onchainFee': 'Estimated fee',
+    'send.onchainFeeHint': '(approx.)',
+    'send.onchainRecv': 'Recipient will receive',
+    'send.errorGeneric': 'Error sending',
 
     // Receive
     'receive.title': 'Receive',

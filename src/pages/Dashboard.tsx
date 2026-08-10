@@ -13,11 +13,12 @@ interface Props {
   recoverable: number;
   onRenew: () => void;
   onRecover: () => void;
+  onRetryOnboard: () => void;
   renewing: boolean;
   recovering: boolean;
 }
 
-export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, recoverable, onRenew, onRecover, renewing, recovering }: Props) {
+export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, recoverable, onRenew, onRecover, onRetryOnboard, renewing, recovering }: Props) {
   const [fiatValue, setFiatValue] = useState('...');
   const pubkeyHex = getPubkeyHex(keypair);
 
@@ -61,6 +62,17 @@ export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, 
             ₿ {tFunc('dash.onchain')}: {balance.onchain.confirmed.toLocaleString('es-ES')} sats
             {balance.onchain.unconfirmed > 0 && (
               <span> (+{balance.onchain.unconfirmed.toLocaleString('es-ES')} {tFunc('dash.onchainPending')})</span>
+            )}
+            {balance.onchain.confirmed > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={onRetryOnboard}
+                  style={{ width: 'auto', padding: '8px 14px', fontSize: 12 }}
+                >
+                  ↻ {tFunc('dash.onchainRetry')}
+                </button>
+              </div>
             )}
           </div>
         )}

@@ -1,6 +1,8 @@
-import { Wallet, SeedIdentity, VtxoManager, Ramps, type Wallet as WalletType } from '@arkade-os/sdk';
+import { Wallet, SeedIdentity, VtxoManager, Ramps, Estimator, type Wallet as WalletType } from '@arkade-os/sdk';
 import { bytesToHex, utf8ToBytes, concatBytes } from '@noble/hashes/utils';
 import { sha256 } from '@noble/hashes/sha256';
+import { bech32 } from 'bech32';
+import { base58check } from '@scure/base';
 
 const ARK_SERVER_URL = 'https://arkade.computer';
 
@@ -221,7 +223,6 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
 export async function sendToAddress(
   to: string,
   amountSats: number,
-  _network: 'ark' | 'lightning' | 'onchain',
 ): Promise<SendResult> {
   if (!walletInstance) throw new Error('Wallet not initialized');
 
@@ -265,6 +266,73 @@ export async function offboardToOnchain(
   const txId = await ramps.offboard(to, fees, BigInt(amountSats));
 
   return { success: true, txId };
+}
+
+function scriptFromAddress(address: string): string {
+  const addr = address.trim();
+
+  if (addr.startsWith('tb1') || addr.startsWith('bc1')) {
+    try {
+      const { words } = bech32.decode(addr, 90);
+      const program = bytesToHex(new Uint8Array(bech32.fromWords(words.slice(1))));
+      const version = words[0];
+      if (version === 0 && program.length === 40) return `0014${program}`;
+      if (version === 0 && program.length === 64) return `0020${program}`;
+      if (version === 1) return `5120${program}`;
+    } catch {
+      // invalid bech32, fall through
+    }
+  }
+
+  if (/^[13]/.test(addr)) {
+    try {
+      const decoded = base58check(sha256).decode(addr);
+      const version = decoded[0];
+      const hash = bytesToHex(decoded.slice(1, 21));
+      if (version === 0x00 || version === 0x6f) return `76a914${hash}88ac`;
+      if (version === 0x05 || version === 0xc4) return `a914${hash}87`;
+    } catch {
+      // invalid base58, fall through
+    }
+  }
+
+  return '';
+}
+
+export async function estimateOnchainSendFee(to: string, amountSats: number): Promise<number> {
+  if (!walletInstance) return 0;
+
+  try {
+    const { fees } = await walletInstance.arkProvider.getInfo();
+    const estimator = new Estimator(fees.intentFee);
+    const vtxos = await walletInstance.getVtxos({
+      withRecoverable: true,
+      withUnrolled: false,
+    });
+
+    let fee = 0;
+    for (const vtxo of vtxos) {
+      const value = Number(BigInt(vtxo.value));
+      if (value <= 0) continue;
+      const inputFee = estimator.evalOffchainInput({
+        amount: BigInt(value),
+        type: 'vtxo',
+        weight: 1000,
+      });
+      if (inputFee.satoshis >= value) continue;
+      fee += inputFee.satoshis;
+    }
+
+    const script = scriptFromAddress(to);
+    const outputFee = estimator.evalOnchainOutput({
+      amount: BigInt(amountSats),
+      script,
+    });
+
+    return fee + outputFee.satoshis;
+  } catch {
+    return 0;
+  }
 }
 
 export async function finalizePendingTxs(): Promise<{ finalized: string[]; pending: string[] }> {
