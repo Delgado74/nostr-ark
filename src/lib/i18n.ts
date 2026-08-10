@@ -35,6 +35,7 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.vtxoRecover': 'Recuperar',
     'dash.vtxoRecovering': 'Recuperando...',
     'dash.onchainRetry': 'Reintentar conversión a Ark',
+    'dash.onchainConverting': 'Convirtiendo...',
 
     // Convert
     'convert.title': 'Convertir',
@@ -169,6 +170,7 @@ const t: Record<Lang, Record<string, string>> = {
     'dash.vtxoRecover': 'Recover',
     'dash.vtxoRecovering': 'Recovering...',
     'dash.onchainRetry': 'Retry converting to Ark',
+    'dash.onchainConverting': 'Converting...',
 
     // Convert
     'convert.title': 'Convert',
