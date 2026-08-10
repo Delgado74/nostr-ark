@@ -16,9 +16,11 @@ interface Props {
   onRetryOnboard: () => void;
   renewing: boolean;
   recovering: boolean;
+  onboarding: boolean;
+  onboardingError: string;
 }
 
-export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, recoverable, onRenew, onRecover, onRetryOnboard, renewing, recovering }: Props) {
+export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, recoverable, onRenew, onRecover, onRetryOnboard, renewing, recovering, onboarding, onboardingError }: Props) {
   const [fiatValue, setFiatValue] = useState('...');
   const pubkeyHex = getPubkeyHex(keypair);
 
@@ -68,10 +70,16 @@ export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, 
                 <button
                   className="btn btn-secondary btn-sm"
                   onClick={onRetryOnboard}
+                  disabled={onboarding}
                   style={{ width: 'auto', padding: '8px 14px', fontSize: 12 }}
                 >
-                  ↻ {tFunc('dash.onchainRetry')}
+                  {onboarding ? `↻ ${tFunc('dash.onchainConverting')}` : `↻ ${tFunc('dash.onchainRetry')}`}
                 </button>
+                {onboardingError && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--danger, #e5484d)', wordBreak: 'break-word' }}>
+                    {onboardingError}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -85,7 +85,12 @@ export function signEvent(event: any, privkey: Uint8Array): string {
 export function identifyInputType(input: string): 'lightning' | 'ark' | 'onchain' | 'unknown' {
   const trimmed = input.trim().replace(/^lightning:/i, '').toLowerCase();
   if (trimmed.startsWith('lnbc') || trimmed.startsWith('lntb') || trimmed.startsWith('lntbs') || trimmed.startsWith('lnurl')) return 'lightning';
-  if (trimmed.startsWith('ark1') || trimmed.startsWith('ark:')) return 'ark';
+  if (
+    trimmed.startsWith('ark1') ||
+    trimmed.startsWith('ark:') ||
+    trimmed.startsWith('tark1') ||
+    trimmed.startsWith('tark:')
+  ) return 'ark';
   if (trimmed.startsWith('bc1') || trimmed.startsWith('tb1') || trimmed.startsWith('1') || trimmed.startsWith('3')) return 'onchain';
   return 'unknown';
 }

@@ -29,6 +29,9 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [renewing, setRenewing] = useState(false);
   const [recovering, setRecovering] = useState(false);
+  const [onboarding, setOnboarding] = useState(false);
+  const [onboardingError, setOnboardingError] = useState('');
+  const onboardingRef = useRef(false);
   const refreshTimerRef = useRef<number | null>(null);
 
   const refreshData = useCallback(async () => {
@@ -175,10 +178,38 @@ export const App: React.FC = () => {
   }, [refreshData]);
 
   const handleOnboard = useCallback(async (amountSats?: number) => {
-    const m = await import('./lib/ark');
-    await m.onboardToArk(amountSats);
-    await refreshData();
+    if (onboardingRef.current) return;
+    onboardingRef.current = true;
+    setOnboarding(true);
+    setOnboardingError('');
+    let ok = false;
+    try {
+      const m = await import('./lib/ark');
+      await m.onboardToArk(amountSats);
+      ok = true;
+      setOnboardingError('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setOnboardingError(msg);
+      console.error('onboard failed:', msg);
+    } finally {
+      onboardingRef.current = false;
+      setOnboarding(false);
+      if (ok) await refreshData();
+    }
   }, [refreshData]);
+
+  useEffect(() => {
+    if (!walletReady) return;
+    const tryAutoOnboard = () => {
+      if (balance.onchain.confirmed > 0 && !onboardingRef.current) {
+        void handleOnboard();
+      }
+    };
+    tryAutoOnboard();
+    const id = window.setInterval(tryAutoOnboard, 60000);
+    return () => clearInterval(id);
+  }, [walletReady, balance.onchain.confirmed, handleOnboard]);
 
   if (loading) {
     return (
@@ -209,6 +240,8 @@ export const App: React.FC = () => {
           onRetryOnboard={handleOnboard}
           renewing={renewing}
           recovering={recovering}
+          onboarding={onboarding}
+          onboardingError={onboardingError}
         />
       )}
       {page === 'send' && (
