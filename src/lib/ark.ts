@@ -39,6 +39,7 @@ export interface ArkTransaction {
   destinationPubkey?: string;
   bolt11?: string;
   txid?: string;
+  onchainTxid?: string;
 }
 
 export interface SendResult {
@@ -210,6 +211,7 @@ export async function getTransactions(): Promise<ArkTransaction[]> {
       memo: undefined,
       network: tx.key.boardingTxid ? 'onchain' as const : 'ark' as const,
       txid: tx.key.arkTxid || tx.key.commitmentTxid || tx.key.boardingTxid || undefined,
+      onchainTxid: tx.key.commitmentTxid || tx.key.boardingTxid || undefined,
     }));
   } catch {
     return [];
@@ -250,6 +252,13 @@ export async function offboardToOnchain(
   amountSats: number,
 ): Promise<SendResult> {
   if (!walletInstance) throw new Error('Wallet not initialized');
+
+  const ownAddresses = await walletInstance.getBoardingAddresses();
+  if (ownAddresses.includes(to.trim())) {
+    throw new Error(
+      'El destino es tu propia dirección de recepción. Usa una dirección externa para retirar a onchain.',
+    );
+  }
 
   const ramps = new Ramps(walletInstance);
   const { fees } = await walletInstance.arkProvider.getInfo();
