@@ -3,7 +3,7 @@ import { type NostrKeyPair, getPrivkeyHex } from './lib/nostr';
 import { type ArkBalance, type ArkTransaction, type VtxoInfo, initArkWallet, getBalance, getTransactions, renewVtxos, recoverVtxos, getRecoverableBalance, finalizePendingTxs, resetWallet } from './lib/ark';
 import * as lnbits from './lib/lnbits';
 import { storage, KEYS } from './lib/storage';
-import { tFunc, getNetwork } from './lib/i18n';
+import { tFunc } from './lib/i18n';
 import { AuthScreen } from './pages/AuthScreen';
 import { Dashboard } from './pages/Dashboard';
 import { SendScreen } from './pages/SendScreen';
@@ -17,7 +17,6 @@ export const App: React.FC = () => {
   const [balance, setBalance] = useState<ArkBalance>({ confirmed: 0, pending: 0, recoverable: 0, total: 0 });
   const [lnbitsBalance, setLnbitsBalance] = useState(0);
   const [transactions, setTransactions] = useState<ArkTransaction[]>([]);
-  const [network, setNetworkState] = useState(getNetwork());
   const [vtxos, setVtxos] = useState<VtxoInfo[]>([]);
   const [recoverable, setRecoverable] = useState(0);
   const [walletReady, setWalletReady] = useState(false);
@@ -143,16 +142,6 @@ export const App: React.FC = () => {
     setPage('auth');
   }, []);
 
-  const handleNetworkChange = useCallback(async () => {
-    setNetworkState(getNetwork());
-    if (keypair) {
-      await resetWallet();
-      setWalletReady(false);
-      const privkeyHex = getPrivkeyHex(keypair);
-      await handleInitWallet(privkeyHex);
-    }
-  }, [keypair, handleInitWallet]);
-
   const handleRenew = useCallback(async () => {
     setRenewing(true);
     try {
@@ -213,7 +202,7 @@ export const App: React.FC = () => {
         <HistoryScreen transactions={transactions} onNavigate={setPage} />
       )}
       {page === 'settings' && (
-        <SettingsScreen keypair={keypair} onNavigate={setPage} onLogout={handleLogout} onNetworkChange={handleNetworkChange} />
+        <SettingsScreen keypair={keypair} onNavigate={setPage} onLogout={handleLogout} />
       )}
 
       {page !== 'auth' && (

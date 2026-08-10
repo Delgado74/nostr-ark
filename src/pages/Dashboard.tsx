@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { type NostrKeyPair, shortPubkey, getPubkeyHex } from '../lib/nostr';
 import { type ArkBalance, type VtxoInfo } from '../lib/ark';
 import { satsToFiat, getCurrency } from '../lib/yadio';
-import { tFunc, getNetwork } from '../lib/i18n';
+import { tFunc } from '../lib/i18n';
 
 interface Props {
   keypair: NostrKeyPair;
@@ -20,7 +20,6 @@ interface Props {
 export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, recoverable, onRenew, onRecover, renewing, recovering }: Props) {
   const [fiatValue, setFiatValue] = useState('...');
   const pubkeyHex = getPubkeyHex(keypair);
-  const network = getNetwork();
 
   const totalConfirmed = balance.confirmed + lnbitsBalance;
 
@@ -37,11 +36,6 @@ export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, 
     <div>
       <div className="header" style={{ justifyContent: 'center' }}>
         <h1>NostrArk</h1>
-      </div>
-
-      <div className={`network-badge ${network}`}>
-        <span className="dot"></span>
-        {network === 'mainnet' ? tFunc('dash.mainnet') : tFunc('dash.signet')}
       </div>
 
       <div className="balance-section">

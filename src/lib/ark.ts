@@ -1,6 +1,5 @@
 import { Wallet, SingleKey, VtxoManager, type Wallet as WalletType } from '@arkade-os/sdk';
 import { bytesToHex } from '@noble/hashes/utils';
-import { getNetwork } from './i18n';
 
 const ARK_SERVER_URL = 'https://arkade.computer';
 

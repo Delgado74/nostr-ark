@@ -1,27 +1,27 @@
 # NostrArk
 
-Billetera Bitcoin con identidad Nostr y backend Ark. Envía y recibe por Lightning (LNbits), Ark y on-chain desde un único par de claves, con montos en CUP, USD y EUR.
+Bitcoin wallet with Nostr identity and Ark protocol backend. Send and receive over Lightning (LNbits), Ark, and on-chain from a single key pair, with amounts in CUP, USD, and EUR.
 
-## Características
+## Features
 
-- **Identidad Nostr**: tu wallet es tu par de claves `nsec`/`npub` (bech32).
-- **Respaldo BIP39 (NIP-06)**: al crear la billetera se muestran 12 palabras de respaldo (derivación `m/44'/1237'/0'/0/0`). Restaura desde el nsec o desde las palabras (ES/EN).
-- **Lightning con backend LNbits**: conecta tu instancia LNbits por URL + API key o escaneando un QR; crea y paga invoices BOLT11.
-- **Ark Protocol**: saldo en VTXOs vía Arkade SDK/ASP (sin canales ni gestión de liquidez).
-- **On-chain (boarding)**: dirección de boarding para fondear el wallet Ark.
-- **Escáner QR**: captura de invoices BOLT11 con cámara (`@capacitor-mlkit/barcode-scanning`).
-- **Multi-moneda**: CUP, USD, EUR con tasas de Yadio.
-- **Bilingüe**: Español / English.
-- **Self-custodial**: siempre controlas tus claves.
+- **Nostr identity**: your wallet is your `nsec`/`npub` key pair (bech32).
+- **BIP39 backup (NIP-06)**: on wallet creation, a 12-word backup phrase is shown (derivation `m/44'/1237'/0'/0/0`). Restore from the nsec or from the words (ES/EN).
+- **Lightning with an LNbits backend**: connect your LNbits instance via URL + API key or by scanning a QR; create and pay BOLT11 invoices.
+- **Ark Protocol**: balance in VTXOs via Arkade SDK/ASP (no channels or liquidity management).
+- **On-chain (boarding)**: boarding address to fund the Ark wallet.
+- **QR scanner**: captures BOLT11 invoices with the camera (`@capacitor-mlkit/barcode-scanning`).
+- **Multi-currency**: CUP, USD, EUR with Yadio rates.
+- **Bilingual**: Español / English.
+- **Self-custodial**: you always control your keys.
 
 ## Tech Stack
 
 - **Frontend**: React 18 + Vite + TypeScript
-- **Móvil**: Capacitor 6 (Android)
+- **Mobile**: Capacitor 6 (Android)
 - **Ark**: `@arkade-os/sdk`
-- **Lightning**: API de LNbits (backend por URL + API key)
-- **Cripto**: `@noble/hashes`, `@noble/curves`, `bech32`, `@scure/bip39`, `@scure/bip32`, `nostr-tools`
-- **Fiat**: API de Yadio (tasas)
+- **Lightning**: LNbits API (URL + API key backend)
+- **Crypto**: `@noble/hashes`, `@noble/curves`, `bech32`, `@scure/bip39`, `@scure/bip32`, `nostr-tools`
+- **Fiat**: Yadio API (exchange rates)
 - **CI/CD**: GitHub Actions (`build-apk.yml`)
 
 ## Development
@@ -33,35 +33,35 @@ Billetera Bitcoin con identidad Nostr y backend Ark. Envía y recibe por Lightni
 ### Setup
 
 ```bash
-# Instalar dependencias
+# Install dependencies
 npm install
 
-# Servidor de desarrollo web
+# Web development server
 npm run dev
 
-# Build de producción web
+# Production web build
 npm run build
 
-# Tests de los decoders (BOLT11, mnemónico)
+# Decoder tests (BOLT11, mnemonic)
 node scripts/test_decode.mjs
 node scripts/test_parse.mjs
 node scripts/test_mnemonic.mjs
 ```
 
-### Build del APK Android
+### Building the Android APK
 
-El APK se genera con GitHub Actions (disparador manual `workflow_dispatch`):
+The APK is built with GitHub Actions (manual `workflow_dispatch` trigger):
 
-1. `Actions` → `Build Android APK` → `Run workflow` (elige la rama).
-2. Descarga el artifact `nostr-ark-apk`.
+1. `Actions` → `Build Android APK` → `Run workflow` (pick the branch).
+2. Download the `nostr-ark-apk` artifact.
 
-Build local:
+Local build:
 
 ```bash
 npm run build
-npx cap add android   # primera vez
+npx cap add android   # first time only
 npx cap sync android
-node scripts/prepare-android.mjs   # inyecta permisos cámara + ML Kit en el manifest
+node scripts/prepare-android.mjs   # injects camera + ML Kit permissions into the manifest
 cd android && ./gradlew assembleDebug
 ```
 
@@ -73,42 +73,42 @@ nostr-ark/
 │   ├── pages/               # AuthScreen, Dashboard, Send/Receive/History/Settings
 │   ├── components/          # QrScanner, etc.
 │   ├── lib/
-│   │   ├── nostr.ts         # nsec/npub bech32, firma
-│   │   ├── mnemonic.ts      # BIP39 / NIP-06 (generar, importar, detectar)
-│   │   ├── ark.ts           # Wallet Ark (balance, VTXOs, boarding, pagos)
-│   │   ├── lnbits.ts        # Cliente LNbits (invoices, pagos, saldo)
-│   │   ├── bolt11.ts        # Decoder BOLT11 (monto, memo, expiry)
-│   │   ├── yadio.ts         # Tasas CUP/USD/EUR
-│   │   ├── i18n.ts          # Traducciones es/en
+│   │   ├── nostr.ts         # nsec/npub bech32, signing
+│   │   ├── mnemonic.ts      # BIP39 / NIP-06 (generate, import, detect)
+│   │   ├── ark.ts           # Ark wallet (balance, VTXOs, boarding, payments)
+│   │   ├── lnbits.ts        # LNbits client (invoices, payments, balance)
+│   │   ├── bolt11.ts        # BOLT11 decoder (amount, memo, expiry)
+│   │   ├── yadio.ts         # CUP/USD/EUR rates
+│   │   ├── i18n.ts          # Translations es/en
 │   │   └── storage.ts       # Capacitor Preferences
 │   └── styles.css
 ├── scripts/
-│   ├── prepare-android.mjs  # Idempotente: permisos cámara/ML Kit en CI
-│   └── test_*.mjs           # Tests de decoders
+│   ├── prepare-android.mjs  # Idempotent: camera/ML Kit permissions in CI
+│   └── test_*.mjs           # Decoder tests
 ├── .github/workflows/
-│   └── build-apk.yml        # Build APK (workflow_dispatch)
+│   └── build-apk.yml        # APK build (workflow_dispatch)
 └── capacitor.config.ts
 ```
 
-## Redes soportadas
+## Supported networks
 
-- **Lightning**: pagos instantáneos vía invoices BOLT11 con backend LNbits.
-- **Ark**: VTXOs vía Arkade ASP (mainnet; opción signet disponible en Ajustes).
-- **On-chain**: dirección de boarding para fondear el wallet.
+- **Lightning**: instant payments via BOLT11 invoices with an LNbits backend.
+- **Ark**: VTXOs via Arkade ASP (mainnet).
+- **On-chain**: boarding address to fund the wallet.
 
-## Soporte de monedas
+## Currency support
 
-- CUP (Peso Cubano)
-- USD (Dólar)
+- CUP (Cuban Peso)
+- USD (US Dollar)
 - EUR (Euro)
 
-## Seguridad
+## Security
 
-- Claves guardadas localmente con Capacitor Preferences (solo en el dispositivo).
-- Las palabras de respaldo y el nsec se muestran ocultos: se revelan solo a decisión del usuario.
-- Sin registro ni servidor central: el backend es tu propia instancia LNbits y el ASP Ark.
-- Self-custodial por diseño.
-- El APK de CI se genera con manifest verificado (permisos cámara + ML Kit).
+- Keys stored locally with Capacitor Preferences (device only).
+- Backup words and nsec are hidden by default and only revealed on user action.
+- No registration or central server: the backend is your own LNbits instance and the Ark ASP.
+- Self-custodial by design.
+- The CI APK is built from a verified manifest (camera + ML Kit permissions).
 
 ## License
 

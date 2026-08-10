@@ -3,7 +3,7 @@ import { type NostrKeyPair, getPubkeyHex } from '../lib/nostr';
 import { getArkAddress, getOnchainAddress } from '../lib/ark';
 import * as lnbits from '../lib/lnbits';
 import { satsToFiat, getCurrency } from '../lib/yadio';
-import { tFunc, getNetwork } from '../lib/i18n';
+import { tFunc } from '../lib/i18n';
 import { Clipboard } from '@capacitor/clipboard';
 import QRCode from 'qrcode';
 
@@ -31,7 +31,6 @@ export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props)
   const pollingRef = useRef<number | null>(null);
 
   const pubkeyHex = getPubkeyHex(keypair);
-  const network = getNetwork();
 
   useEffect(() => {
     lnbits.isConnected().then(setLnbitsConnected);
@@ -45,7 +44,7 @@ export function ReceiveScreen({ keypair, onNavigate, onPaymentReceived }: Props)
     } else {
       setAddress('');
     }
-  }, [networkType, pubkeyHex, network]);
+  }, [networkType, pubkeyHex]);
 
   const handleGenerateInvoice = async () => {
     if (!lnbitsConnected || !amount || Number(amount) <= 0) return;
