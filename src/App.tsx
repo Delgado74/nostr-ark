@@ -175,9 +175,9 @@ export const App: React.FC = () => {
     }
   }, [refreshData]);
 
-  const handleOnboard = useCallback(async () => {
+  const handleOnboard = useCallback(async (amountSats?: number) => {
     const m = await import('./lib/ark');
-    await m.onboardToArk();
+    await m.onboardToArk(amountSats);
     await refreshData();
   }, [refreshData]);
 

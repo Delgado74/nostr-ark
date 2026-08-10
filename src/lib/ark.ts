@@ -231,12 +231,16 @@ export async function sendToAddress(
   return { success: true, txId: txid };
 }
 
-export async function onboardToArk(): Promise<SendResult> {
+export async function onboardToArk(amountSats?: number): Promise<SendResult> {
   if (!walletInstance) throw new Error('Wallet not initialized');
 
   const ramps = new Ramps(walletInstance);
   const { fees } = await walletInstance.arkProvider.getInfo();
-  const txId = await ramps.onboard(fees);
+  const txId = await ramps.onboard(
+    fees,
+    undefined,
+    amountSats !== undefined ? BigInt(Math.floor(amountSats)) : undefined,
+  );
 
   return { success: true, txId };
 }
