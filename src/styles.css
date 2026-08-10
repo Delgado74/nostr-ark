@@ -785,55 +785,78 @@ body.scanner-active #root {
   background: var(--blue);
 }
 
-/* Convert (onboard/offboard) card */
-.convert-card {
-  margin-bottom: 12px;
-}
-
-.convert-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 10px;
-}
-
-.convert-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 0;
-  border-top: 1px solid var(--border);
-}
-
-.convert-row:first-of-type {
-  border-top: none;
-}
-
-.convert-info {
+/* Convert screen */
+.convert-screen {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  gap: 12px;
 }
 
-.convert-label {
-  font-size: 11px;
+.convert-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.convert-tile-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.convert-tile-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.convert-tile-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.convert-tile-desc {
+  font-size: 12px;
   color: var(--text2);
+  line-height: 1.4;
 }
 
-.convert-value {
+.convert-tile-amount {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--accent);
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(247, 147, 26, 0.08);
+  border: 1px dashed var(--border);
+  text-align: center;
 }
 
-.convert-btn {
-  flex-shrink: 0;
+.convert-tile-amount.empty {
+  color: var(--text2);
+  background: transparent;
+  font-weight: 500;
 }
 
 .withdraw-panel {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
+  margin-bottom: 0;
+}
+
+.convert-msg {
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: center;
+  word-break: break-all;
+}
+
+.convert-msg.success {
+  background: rgba(46, 204, 113, 0.12);
+  color: var(--green);
+}
+
+.convert-msg.error {
+  background: rgba(231, 76, 60, 0.1);
+  color: var(--red);
 }
