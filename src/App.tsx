@@ -10,6 +10,7 @@ import { SendScreen } from './pages/SendScreen';
 import { ReceiveScreen } from './pages/ReceiveScreen';
 import { HistoryScreen } from './pages/HistoryScreen';
 import { SettingsScreen } from './pages/SettingsScreen';
+import { ConvertScreen } from './pages/ConvertScreen';
 
 export const App: React.FC = () => {
   const [keypair, setKeypair] = useState<NostrKeyPair | null>(null);
@@ -214,8 +215,6 @@ export const App: React.FC = () => {
           onRecover={handleRecover}
           renewing={renewing}
           recovering={recovering}
-          onOnboard={handleOnboard}
-          onOffboard={handleOffboard}
         />
       )}
       {page === 'send' && (
@@ -226,6 +225,14 @@ export const App: React.FC = () => {
       )}
       {page === 'history' && (
         <HistoryScreen transactions={transactions} onNavigate={setPage} />
+      )}
+      {page === 'convert' && (
+        <ConvertScreen
+          balance={balance}
+          onNavigate={setPage}
+          onOnboard={handleOnboard}
+          onOffboard={handleOffboard}
+        />
       )}
       {page === 'settings' && (
         <SettingsScreen keypair={keypair} onNavigate={setPage} onLogout={handleLogout} />
@@ -238,6 +245,9 @@ export const App: React.FC = () => {
           </button>
           <button className={`nav-item ${page === 'history' ? 'active' : ''}`} onClick={() => setPage('history')}>
             <span className="nav-icon">⏱</span>
+          </button>
+          <button className={`nav-item ${page === 'convert' ? 'active' : ''}`} onClick={() => setPage('convert')}>
+            <span className="nav-icon">⇄</span>
           </button>
           <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => setPage('settings')}>
             <span className="nav-icon">⚙</span>
