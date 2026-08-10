@@ -15,13 +15,51 @@ interface Props {
   onRecover: () => void;
   renewing: boolean;
   recovering: boolean;
+  onOnboard: () => Promise<void>;
+  onOffboard: (address: string, amountSats: number) => Promise<void>;
 }
 
-export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, recoverable, onRenew, onRecover, renewing, recovering }: Props) {
+export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, recoverable, onRenew, onRecover, renewing, recovering, onOnboard, onOffboard }: Props) {
   const [fiatValue, setFiatValue] = useState('...');
+  const [onboarding, setOnboarding] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawAddr, setWithdrawAddr] = useState('');
+  const [withdrawAmt, setWithdrawAmt] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [convertError, setConvertError] = useState('');
   const pubkeyHex = getPubkeyHex(keypair);
 
   const totalConfirmed = balance.confirmed + lnbitsBalance;
+  const hasOnchain = balance.onchain.total > 0;
+  const hasArk = balance.confirmed > 0;
+
+  const handleOnboard = async () => {
+    setOnboarding(true);
+    setConvertError('');
+    try {
+      await onOnboard();
+    } catch (e) {
+      setConvertError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOnboarding(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!withdrawAddr.trim() || !withdrawAmt || Number(withdrawAmt) <= 0) return;
+    setWithdrawing(true);
+    setConvertError('');
+    try {
+      await onOffboard(withdrawAddr.trim(), Number(withdrawAmt));
+      setWithdrawOpen(false);
+      setWithdrawAddr('');
+      setWithdrawAmt('');
+    } catch (e) {
+      setConvertError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   useEffect(() => {
     satsToFiat(totalConfirmed, getCurrency()).then(setFiatValue);
@@ -49,10 +87,18 @@ export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, 
             +{balance.pending.toLocaleString('es-ES')} {tFunc('dash.pending')}
           </div>
         )}
-        {lnbitsBalance > 0 && (
+        {(lnbitsBalance > 0 || hasOnchain) && (
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4, display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <span>⚡ LNbits: {lnbitsBalance.toLocaleString('es-ES')}</span>
             <span>🔗 Ark: {balance.confirmed.toLocaleString('es-ES')}</span>
+            {lnbitsBalance > 0 && <span>⚡ LNbits: {lnbitsBalance.toLocaleString('es-ES')}</span>}
+          </div>
+        )}
+        {hasOnchain && (
+          <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
+            ₿ {tFunc('dash.onchain')}: {balance.onchain.confirmed.toLocaleString('es-ES')} sats
+            {balance.onchain.unconfirmed > 0 && (
+              <span> (+{balance.onchain.unconfirmed.toLocaleString('es-ES')} {tFunc('dash.onchainPending')})</span>
+            )}
           </div>
         )}
       </div>
@@ -67,6 +113,76 @@ export function Dashboard({ keypair, onNavigate, balance, lnbitsBalance, vtxos, 
           {tFunc('dash.receive')}
         </button>
       </div>
+
+      {(hasOnchain || hasArk) && (
+        <div className="card convert-card">
+          <div className="convert-title">⇄ {tFunc('dash.convert')}</div>
+          {hasOnchain && (
+            <div className="convert-row">
+              <div className="convert-info">
+                <span className="convert-label">₿ {tFunc('dash.onchain')}</span>
+                <span className="convert-value">
+                  {balance.onchain.total.toLocaleString('es-ES')} sats
+                </span>
+              </div>
+              <button
+                className="btn btn-secondary btn-sm convert-btn"
+                onClick={handleOnboard}
+                disabled={onboarding}
+              >
+                {onboarding ? `⏳ ${tFunc('dash.converting')}` : `⬇️ ${tFunc('dash.convertToArk')}`}
+              </button>
+            </div>
+          )}
+          {hasArk && (
+            <div className="convert-row">
+              <div className="convert-info">
+                <span className="convert-label">🔗 {tFunc('dash.ark')}</span>
+                <span className="convert-value">
+                  {balance.confirmed.toLocaleString('es-ES')} sats
+                </span>
+              </div>
+              <button
+                className="btn btn-secondary btn-sm convert-btn"
+                onClick={() => setWithdrawOpen(!withdrawOpen)}
+              >
+                ⬆️ {tFunc('dash.withdraw')}
+              </button>
+            </div>
+          )}
+          {withdrawOpen && (
+            <div className="withdraw-panel">
+              <input
+                className="input"
+                placeholder={tFunc('dash.withdrawAddrPlaceholder')}
+                value={withdrawAddr}
+                onChange={(e) => setWithdrawAddr(e.target.value)}
+                style={{ marginBottom: 8 }}
+              />
+              <input
+                className="input"
+                type="number"
+                placeholder={tFunc('dash.withdrawAmountPlaceholder')}
+                value={withdrawAmt}
+                onChange={(e) => setWithdrawAmt(e.target.value)}
+                style={{ marginBottom: 8 }}
+              />
+              <button
+                className="btn btn-primary btn-sm vtxo-btn"
+                onClick={handleWithdraw}
+                disabled={withdrawing || !withdrawAddr.trim() || !withdrawAmt || Number(withdrawAmt) <= 0}
+              >
+                {withdrawing ? `⏳ ${tFunc('dash.withdrawing')}` : `⬆️ ${tFunc('dash.withdrawConfirm')}`}
+              </button>
+            </div>
+          )}
+          {convertError && (
+            <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 8, wordBreak: 'break-all' }}>
+              {convertError}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* VTXO Status Card */}
       <div className="card vtxo-card">

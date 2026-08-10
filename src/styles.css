@@ -784,3 +784,56 @@ body.scanner-active #root {
 .network-badge.signet .dot {
   background: var(--blue);
 }
+
+/* Convert (onboard/offboard) card */
+.convert-card {
+  margin-bottom: 12px;
+}
+
+.convert-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.convert-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.convert-row:first-of-type {
+  border-top: none;
+}
+
+.convert-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.convert-label {
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.convert-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.convert-btn {
+  flex-shrink: 0;
+}
+
+.withdraw-panel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
