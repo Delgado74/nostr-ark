@@ -10,7 +10,6 @@ import { SendScreen } from './pages/SendScreen';
 import { ReceiveScreen } from './pages/ReceiveScreen';
 import { HistoryScreen } from './pages/HistoryScreen';
 import { SettingsScreen } from './pages/SettingsScreen';
-import { ConvertScreen } from './pages/ConvertScreen';
 
 export const App: React.FC = () => {
   const [keypair, setKeypair] = useState<NostrKeyPair | null>(null);
@@ -181,12 +180,6 @@ export const App: React.FC = () => {
     await refreshData();
   }, [refreshData]);
 
-  const handleOffboard = useCallback(async (address: string, amountSats: number) => {
-    const m = await import('./lib/ark');
-    await m.offboardToOnchain(address, amountSats);
-    await refreshData();
-  }, [refreshData]);
-
   if (loading) {
     return (
       <div className="app">
@@ -213,6 +206,7 @@ export const App: React.FC = () => {
           recoverable={recoverable}
           onRenew={handleRenew}
           onRecover={handleRecover}
+          onRetryOnboard={handleOnboard}
           renewing={renewing}
           recovering={recovering}
         />
@@ -226,14 +220,6 @@ export const App: React.FC = () => {
       {page === 'history' && (
         <HistoryScreen transactions={transactions} onNavigate={setPage} />
       )}
-      {page === 'convert' && (
-        <ConvertScreen
-          balance={balance}
-          onNavigate={setPage}
-          onOnboard={handleOnboard}
-          onOffboard={handleOffboard}
-        />
-      )}
       {page === 'settings' && (
         <SettingsScreen keypair={keypair} onNavigate={setPage} onLogout={handleLogout} />
       )}
@@ -245,9 +231,6 @@ export const App: React.FC = () => {
           </button>
           <button className={`nav-item ${page === 'history' ? 'active' : ''}`} onClick={() => setPage('history')}>
             <span className="nav-icon">⏱</span>
-          </button>
-          <button className={`nav-item ${page === 'convert' ? 'active' : ''}`} onClick={() => setPage('convert')}>
-            <span className="nav-icon">⇄</span>
           </button>
           <button className={`nav-item ${page === 'settings' ? 'active' : ''}`} onClick={() => setPage('settings')}>
             <span className="nav-icon">⚙</span>

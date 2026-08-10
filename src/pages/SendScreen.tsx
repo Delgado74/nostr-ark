@@ -1,6 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type NostrKeyPair, identifyInputType } from '../lib/nostr';
-import { sendToAddress, parseInvoiceAmount, type ArkTransaction, type ArkBalance } from '../lib/ark';
+import {
+  sendToAddress,
+  offboardToOnchain,
+  estimateOnchainSendFee,
+  parseInvoiceAmount,
+  type ArkTransaction,
+  type ArkBalance,
+} from '../lib/ark';
 import { decodeBolt11 } from '../lib/bolt11';
 import * as lnbits from '../lib/lnbits';
 import { satsToFiat, getCurrency, getSatsPerUnit } from '../lib/yadio';
@@ -25,8 +32,25 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [onchainFee, setOnchainFee] = useState<number | null>(null);
 
   const inputType = identifyInputType(input);
+
+  const sendAmount = amount && Number(amount) > 0 ? Number(amount) : 0;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (inputType === 'onchain' && sendAmount > 0) {
+      estimateOnchainSendFee(input.trim(), sendAmount).then((fee) => {
+        if (!cancelled) setOnchainFee(fee);
+      });
+    } else {
+      setOnchainFee(null);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [input, inputType, sendAmount]);
 
   const handleAmountChange = async (val: string) => {
     setAmount(val);
@@ -104,12 +128,8 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
         };
         onTx(tx);
         onNavigate('dash');
-      } else {
-        const result = await sendToAddress(
-          input.trim(),
-          Number(amount),
-          inputType === 'ark' ? 'ark' : 'onchain',
-        );
+      } else if (inputType === 'onchain') {
+        const result = await offboardToOnchain(input.trim(), Number(amount));
 
         if (result.success) {
           const tx: ArkTransaction = {
@@ -118,21 +138,37 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
             amount: Number(amount),
             timestamp: Date.now(),
             memo: memo || undefined,
-            network: inputType === 'ark' ? 'ark' : 'onchain',
+            network: 'onchain',
+            fiatAtTime: fiatAtTime,
+            onchainTxid: result.txId,
+          };
+          onTx(tx);
+          onNavigate('dash');
+        }
+      } else {
+        const result = await sendToAddress(input.trim(), Number(amount));
+
+        if (result.success) {
+          const tx: ArkTransaction = {
+            id: result.txId,
+            type: 'outgoing',
+            amount: Number(amount),
+            timestamp: Date.now(),
+            memo: memo || undefined,
+            network: 'ark',
             fiatAtTime: fiatAtTime,
           };
           onTx(tx);
           onNavigate('dash');
         }
       }
-    } catch {
-      setError('Error al enviar');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : tFunc('send.errorGeneric'));
     } finally {
       setSending(false);
     }
   };
 
-  const sendAmount = amount && Number(amount) > 0 ? Number(amount) : 0;
   const availableBalance = inputType === 'lightning' ? lnbitsBalance : balance.confirmed;
   const insufficientBalance = sendAmount > 0 && availableBalance < sendAmount;
   const canSend = input.trim() && sendAmount > 0 && inputType !== 'unknown' && !insufficientBalance;
@@ -214,6 +250,39 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
           onChange={(e) => setMemo(e.target.value)}
         />
       </div>
+
+      {inputType === 'onchain' && sendAmount > 0 && (
+        <div
+          className="card card-sm"
+          style={{
+            marginBottom: 12,
+            borderColor: 'var(--accent)',
+            background: 'rgba(255, 159, 28, 0.06)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8, fontSize: 13 }}>
+            <span>₿</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700 }}>{tFunc('send.onchainTitle')}</div>
+              <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
+                {tFunc('send.onchainInfo')}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 8 }}>
+                <span style={{ color: 'var(--text2)' }}>{tFunc('send.onchainFee')}</span>
+                <span>
+                  {onchainFee === null ? '...' : `${onchainFee.toLocaleString('es-ES')} sats ${tFunc('send.onchainFeeHint')}`}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 4 }}>
+                <span style={{ color: 'var(--text2)' }}>{tFunc('send.onchainRecv')}</span>
+                <span style={{ fontWeight: 600 }}>
+                  ≈ {Math.max(0, sendAmount - (onchainFee ?? 0)).toLocaleString('es-ES')} sats
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {sendAmount > 0 && inputType !== 'unknown' && (
         <div className="card card-sm" style={{ marginBottom: 12 }}>
