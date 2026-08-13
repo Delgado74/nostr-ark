@@ -5,7 +5,7 @@ import * as lnbits from '../lib/lnbits';
 import { Clipboard } from '@capacitor/clipboard';
 import { tFunc } from '../lib/i18n';
 
-const EXPLORER_URL = 'https://mempool.signet.arkade.sh/tx/';
+const EXPLORER_URL = 'https://mempool.space/tx/';
 
 interface Props {
   tx: ArkTransaction;

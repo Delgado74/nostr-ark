@@ -62,7 +62,7 @@ export async function initArkWallet(privkeyHex: string): Promise<WalletType> {
   if (walletInstance) return walletInstance;
 
   const identity = SeedIdentity.fromSeed(seedFromPrivkey(privkeyHex), {
-    isMainnet: false,
+    isMainnet: true,
   });
 
   walletInstance = await Wallet.create({
