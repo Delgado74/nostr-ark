@@ -169,7 +169,8 @@ export function SendScreen({ keypair, onNavigate, onTx, balance, lnbitsBalance }
     }
   };
 
-  const availableBalance = inputType === 'lightning' ? lnbitsBalance : balance.confirmed;
+  const availableBalance =
+    inputType === 'lightning' ? lnbitsBalance : balance.confirmed + balance.pending;
   const insufficientBalance = sendAmount > 0 && availableBalance < sendAmount;
   const canSend = input.trim() && sendAmount > 0 && inputType !== 'unknown' && !insufficientBalance;
 
