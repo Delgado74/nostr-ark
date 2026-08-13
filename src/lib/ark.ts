@@ -69,6 +69,7 @@ export async function initArkWallet(privkeyHex: string): Promise<WalletType> {
     identity,
     arkServerUrl: ARK_SERVER_URL,
     walletMode: 'hd',
+    minCheckpointExitDelaySeconds: 0n,
     settlementConfig: {
       vtxoThreshold: 259200,
       boardingUtxoSweep: true,
